@@ -11,43 +11,31 @@ SCOPES = [
 SPREADSHEET_ID = "15nvtf4jxjq7yU-AZctGXnYst22BpgdFbX8gKQS71imM"
 
 SHEETS_CONFIG = {
-    "medidas": [
-        "fecha", "edad", "peso_lbs", "altura_cm",
-        "cintura_cm", "cadera_cm", "muslo_der_cm", "muslo_izq_cm",
-        "brazo_der_cm", "brazo_izq_cm", "hombros_cm",
-        "imc", "rcc", "rel_hombros_cintura", "notas"
-    ],
-    "evaluacion": [
-        "fecha", "parq_resultado", "objetivo", "nivel", "zonas_enfoque",
-        "dias_semana", "duracion_sesion", "momento_entreno", "equipo",
-        "lesiones", "detalle_lesiones", "horas_sueno", "nivel_estres",
-        "trabajo_sedentario", "agua_litros"
-    ],
-    "ciclo": ["fecha_inicio", "duracion_dias", "notas"],
-    "rutinas_sesiones": [
-        "fecha", "tipo_rutina", "ejercicio", "series", "reps", "peso_lbs", "notas"
-    ],
-    "config": ["clave", "valor"],
-    "ejercicios": ["id", "nombre", "grupo_muscular", "descripcion", "url_youtube", "dificultad", "activo"],
+    "medidas":    ["fecha","edad","peso_lbs","altura_cm","cintura_cm","cadera_cm",
+                   "muslo_der_cm","muslo_izq_cm","brazo_der_cm","brazo_izq_cm",
+                   "hombros_cm","imc","rcc","rel_hombros_cintura","notas"],
+    "evaluacion": ["fecha","parq_resultado","objetivo","nivel","zonas_enfoque",
+                   "dias_semana","duracion_sesion","momento_entreno","equipo",
+                   "lesiones","detalle_lesiones","horas_sueno","nivel_estres",
+                   "trabajo_sedentario","agua_litros"],
+    "ciclo":      ["fecha_inicio","duracion_dias","notas"],
+    "rutinas_sesiones": ["fecha","tipo_rutina","ejercicio","series","reps","peso_lbs","notas"],
+    "config":     ["clave","valor"],
+    "ejercicios": ["id","nombre","grupo_muscular","descripcion","url_youtube","dificultad","activo"],
 }
 
 
 def get_client():
     try:
-        credentials_info = json.loads(st.secrets["GOOGLE_CREDENTIALS"])
+        info = json.loads(st.secrets["GOOGLE_CREDENTIALS"])
     except KeyError:
-        credentials_info = dict(st.secrets["gcp_service_account"])
-    creds = Credentials.from_service_account_info(credentials_info, scopes=SCOPES)
+        info = dict(st.secrets["gcp_service_account"])
+    creds = Credentials.from_service_account_info(info, scopes=SCOPES)
     return gspread.authorize(creds)
 
 
 def get_spreadsheet():
-    client = get_client()
-    try:
-        return client.open_by_key(SPREADSHEET_ID)
-    except Exception as e:
-        st.error(f"Error abriendo spreadsheet: {e}")
-        raise
+    return get_client().open_by_key(SPREADSHEET_ID)
 
 
 def get_worksheet(nombre: str):
@@ -63,7 +51,15 @@ def get_worksheet(nombre: str):
         return ws
 
 
-def leer_como_dataframe(nombre: str):
+def leer_df(nombre: str):
     import pandas as pd
-    ws = get_worksheet(nombre)
-    return pd.DataFrame(ws.get_all_records())
+    return pd.DataFrame(get_worksheet(nombre).get_all_records())
+
+
+def eliminar_fila(nombre_sheet: str, indice_df: int):
+    """
+    Elimina una fila por su índice pandas (0-based).
+    Fila 1 en Sheets = encabezados → datos empiezan en fila 2.
+    """
+    ws = get_worksheet(nombre_sheet)
+    ws.delete_rows(indice_df + 2)
