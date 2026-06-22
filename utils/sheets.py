@@ -11,7 +11,7 @@ SPREADSHEET_NAME = "MisRutinas_DB"
 
 SHEETS_CONFIG = {
     "medidas": [
-        "fecha", "edad", "peso_kg", "altura_cm",
+        "fecha", "edad", "peso_lbs", "altura_cm",
         "cintura_cm", "cadera_cm",
         "muslo_der_cm", "muslo_izq_cm",
         "brazo_der_cm", "brazo_izq_cm",
