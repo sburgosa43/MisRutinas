@@ -192,7 +192,7 @@ def mostrar():
             if tiene_fin:
                 nueva_fin = st.date_input(
                     "📅 Fecha de FIN del período",
-                    value=nueva_inicio + timedelta(days=4),
+                    value=min(nueva_inicio + timedelta(days=4), date.today()),
                     min_value=nueva_inicio,
                     max_value=date.today(),
                     key="ci_fin"
