@@ -1,6 +1,8 @@
 import streamlit as st
 import streamlit.components.v1 as components
 import pandas as pd
+import base64
+from pathlib import Path
 from datetime import date, timedelta
 
 import utils.estado as estado
@@ -11,6 +13,102 @@ from utils.calculos import (calcular_imc, clasificar_imc,
                              calcular_rel_hombros_cintura)
 
 LBS_A_KG = 0.453592
+
+
+def calcular_edad(fecha_nac: date) -> int:
+    hoy = date.today()
+    return hoy.year - fecha_nac.year - ((hoy.month, hoy.day) < (fecha_nac.month, fecha_nac.day))
+
+
+def _cargar_silueta() -> str | None:
+    """Carga la imagen de siluetas desde assets/ como base64."""
+    ruta = Path(__file__).parent.parent / "assets" / "siluetas.jpg"
+    if not ruta.exists():
+        ruta = Path(__file__).parent.parent / "assets" / "siluetas.png"
+    if ruta.exists():
+        with open(ruta, "rb") as f:
+            ext = ruta.suffix.lstrip(".")
+            return f"data:image/{ext};base64," + base64.b64encode(f.read()).decode()
+    return None
+
+
+def silhoueta_html(genero: str) -> str:
+    """
+    Muestra la imagen de siluetas. 
+    La imagen tiene mujer a la izquierda y hombre a la derecha.
+    Recorta el lado correcto según el género.
+    """
+    img_src = _cargar_silueta()
+
+    if not img_src:
+        return """<div style="padding:20px;background:#f1f5f9;border-radius:8px;text-align:center;color:#64748b;font-family:sans-serif;">
+            <p style="margin:0;font-size:13px;">⚠️ Imagen no encontrada.<br>
+            Sube <code>siluetas.jpg</code> a la carpeta <code>assets/</code> del repo.</p>
+        </div>"""
+
+    # Female = left half, Male = right half
+    # CSS trick: container clips to 50% width, image is 200% wide, shifted for male
+    margin = "0" if genero == "Mujer" else "-100%"
+    label  = "👩 Mujer" if genero == "Mujer" else "👨 Hombre"
+
+    return f"""<div style="background:white;border-radius:10px;padding:8px;border:1px solid #e5e7eb;">
+  <p style="margin:0 0 6px 0;font-size:11px;font-weight:600;color:#6b7280;font-family:sans-serif;text-align:center;">{label} — guía de medición</p>
+  <div style="width:100%;overflow:hidden;border-radius:6px;">
+    <img src="{img_src}"
+         style="width:200%;max-width:none;margin-left:{margin};display:block;height:auto;"/>
+  </div>
+</div>"""
+
+
+def calcular_edad(fecha_nac: date) -> int:
+    hoy = date.today()
+    return hoy.year - fecha_nac.year - ((hoy.month, hoy.day) < (fecha_nac.month, fecha_nac.day))
+
+
+
+def calcular_edad(fecha_nac: date) -> int:
+    hoy = date.today()
+    return hoy.year - fecha_nac.year - ((hoy.month, hoy.day) < (fecha_nac.month, fecha_nac.day))
+
+
+def _cargar_silueta() -> str | None:
+    """Carga la imagen de siluetas desde assets/ como base64."""
+    ruta = Path(__file__).parent.parent / "assets" / "siluetas.jpg"
+    if not ruta.exists():
+        ruta = Path(__file__).parent.parent / "assets" / "siluetas.png"
+    if ruta.exists():
+        with open(ruta, "rb") as f:
+            ext = ruta.suffix.lstrip(".")
+            return f"data:image/{ext};base64," + base64.b64encode(f.read()).decode()
+    return None
+
+
+def silhoueta_html(genero: str) -> str:
+    """
+    Muestra la imagen de siluetas. 
+    La imagen tiene mujer a la izquierda y hombre a la derecha.
+    Recorta el lado correcto según el género.
+    """
+    img_src = _cargar_silueta()
+
+    if not img_src:
+        return """<div style="padding:20px;background:#f1f5f9;border-radius:8px;text-align:center;color:#64748b;font-family:sans-serif;">
+            <p style="margin:0;font-size:13px;">⚠️ Imagen no encontrada.<br>
+            Sube <code>siluetas.jpg</code> a la carpeta <code>assets/</code> del repo.</p>
+        </div>"""
+
+    # Female = left half, Male = right half
+    # CSS trick: container clips to 50% width, image is 200% wide, shifted for male
+    margin = "0" if genero == "Mujer" else "-100%"
+    label  = "👩 Mujer" if genero == "Mujer" else "👨 Hombre"
+
+    return f"""<div style="background:white;border-radius:10px;padding:8px;border:1px solid #e5e7eb;">
+  <p style="margin:0 0 6px 0;font-size:11px;font-weight:600;color:#6b7280;font-family:sans-serif;text-align:center;">{label} — guía de medición</p>
+  <div style="width:100%;overflow:hidden;border-radius:6px;">
+    <img src="{img_src}"
+         style="width:200%;max-width:none;margin-left:{margin};display:block;height:auto;"/>
+  </div>
+</div>"""
 
 
 def calcular_edad(fecha_nac: date) -> int:
@@ -199,7 +297,7 @@ def mostrar():
 
     with col_sil:
         st.subheader("Guía de medición")
-        components.html(silhoueta_svg(genero), height=440, scrolling=False)
+        components.html(silhoueta_html(genero), height=480, scrolling=False)
 
     with col_med:
         st.subheader("Medidas corporales (cm)")
