@@ -104,5 +104,7 @@ def mostrar():
                 )
             else:
                 st.info("Aún no hay registros. ¡Agrega el primero arriba! 💪")
-        except Exception as e:
+except Exception as e:
             st.error(f"Error al cargar historial: {e}")
+            st.exception(e)
+        
