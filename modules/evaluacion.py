@@ -3,7 +3,7 @@ import pandas as pd
 from datetime import date
 
 import utils.estado as estado
-from utils.sheets import get_worksheet, leer_df
+from utils.sheets import get_worksheet, leer_df_usuario, guardar_fila_usuario
 from utils.ui_helpers import seccion_eliminar
 
 PAR_Q = [
@@ -38,10 +38,10 @@ EQUIPOS = [
 ]
 
 
-def obtener_perfil() -> dict | None:
+def obtener_perfil(user_id: str) -> dict | None:
     try:
-        filas = get_worksheet("evaluacion").get_all_records()
-        return filas[-1] if filas else None
+        df = leer_df_usuario("evaluacion", user_id)
+        return df.iloc[-1].to_dict() if not df.empty else None
     except Exception:
         return None
 
@@ -64,7 +64,8 @@ def mostrar():
     st.divider()
 
     # Evaluación previa
-    perfil = obtener_perfil()
+    uid    = estado.get('user_id', '')
+    perfil = obtener_perfil(uid)
     if perfil:
         with st.expander("📋 Ver tu última evaluación guardada", expanded=False):
             st.dataframe(pd.DataFrame([perfil]), use_container_width=True, hide_index=True)
@@ -126,13 +127,13 @@ def mostrar():
         with st.spinner("Guardando..."):
             try:
                 parq = "SÍ — consultar médico" if any(respuestas_parq) else "Apto sin restricciones"
-                get_worksheet("evaluacion").append_row([
+                guardar_fila_usuario("evaluacion", [
                     str(date.today()), parq, objetivo, nivel,
                     ", ".join(zonas) if zonas else "General",
                     dias, duracion, momento, equipo,
                     ", ".join(lesiones), detalle.strip(),
                     horas_sueno, nivel_estres, trabajo_sed, agua,
-                ])
+                ], uid)
                 estado.set("eval_objetivo", objetivo)
                 estado.set("eval_nivel",    nivel)
                 estado.set("eval_dias",     dias)
@@ -166,7 +167,7 @@ def mostrar():
     # ── Eliminar registros ────────────────────────────────────────────────
     st.divider()
     try:
-        df = leer_df("evaluacion")
+        df = leer_df_usuario("evaluacion", uid)
         if not df.empty:
             seccion_eliminar("evaluacion", df, "evaluaciones anteriores")
     except Exception:

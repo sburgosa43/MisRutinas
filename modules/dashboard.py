@@ -4,7 +4,7 @@ import plotly.graph_objects as go
 from datetime import date
 
 import utils.estado as estado
-from utils.sheets import leer_df
+from utils.sheets import leer_df_usuario
 from utils.calculos import calcular_imc, clasificar_imc, calcular_rcc, clasificar_rcc_mujer
 
 
@@ -26,7 +26,8 @@ def mostrar():
     st.title(f"🏠 Dashboard {f'— {nombre}' if nombre and nombre != 'Mi Rutina' else ''}")
 
     try:
-        df = leer_df("medidas")
+        uid = estado.get("user_id", "")
+        df  = leer_df_usuario("medidas", uid)
     except Exception as e:
         st.error(f"Error conectando a Google Sheets: {e}")
         st.info("Configura la conexión en el módulo 🔧 Diagnóstico.")

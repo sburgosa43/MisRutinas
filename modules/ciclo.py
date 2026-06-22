@@ -3,7 +3,7 @@ import pandas as pd
 from datetime import date, timedelta
 
 import utils.estado as estado
-from utils.sheets import get_worksheet, leer_df
+from utils.sheets import get_worksheet, leer_df_usuario, guardar_fila_usuario
 from utils.ui_helpers import seccion_eliminar
 
 FASES = {
@@ -106,7 +106,8 @@ def mostrar():
 
     try:
         ws     = get_worksheet("ciclo")
-        df_raw = leer_df("ciclo")
+        uid    = estado.get("user_id", "")
+        df_raw = leer_df_usuario("ciclo", uid)
     except Exception as e:
         st.error(f"Error conectando: {e}")
         return
@@ -221,7 +222,7 @@ def mostrar():
 
         if st.button("💾 Guardar ciclo", type="primary", use_container_width=True):
             try:
-                ws.append_row([str(nueva_inicio), str(nueva_fin) if nueva_fin else "", notas_c.strip()])
+                guardar_fila_usuario("ciclo", [str(nueva_inicio), str(nueva_fin) if nueva_fin else "", notas_c.strip()], uid)
                 st.success("✅ Ciclo registrado.")
                 st.rerun()
             except Exception as e:
@@ -246,7 +247,7 @@ def mostrar():
                             continue
                     if parsed:
                         try:
-                            ws.append_row([str(parsed), "", "Importado"])
+                            guardar_fila_usuario("ciclo", [str(parsed), "", "Importado"], uid)
                             ok += 1
                         except Exception:
                             err.append(linea)

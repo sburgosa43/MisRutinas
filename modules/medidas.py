@@ -6,7 +6,7 @@ from pathlib import Path
 from datetime import date, timedelta
 
 import utils.estado as estado
-from utils.sheets import get_worksheet, leer_df
+from utils.sheets import get_worksheet, leer_df_usuario, guardar_fila_usuario, eliminar_fila_sheets
 from utils.ui_helpers import seccion_eliminar
 from utils.calculos import (calcular_imc, clasificar_imc,
                              calcular_rcc, clasificar_rcc_mujer,
@@ -355,8 +355,8 @@ def mostrar():
     if st.button("💾 Guardar registro", type="primary", use_container_width=True):
         with st.spinner("Guardando..."):
             try:
-                ws = get_worksheet("medidas")
-                ws.append_row([
+                uid = estado.get("user_id", "")
+                guardar_fila_usuario("medidas", [
                     str(date.today()), genero, str(fecha_nac), calcular_edad(fecha_nac),
                     float(peso_lbs), float(altura),
                     float(hombros), float(pecho),
@@ -364,7 +364,7 @@ def mostrar():
                     float(muslo_der), float(muslo_izq),
                     float(brazo_der), float(brazo_izq),
                     imc, rcc, rel_hc, notas.strip()
-                ])
+                ], uid)
                 estado.set("genero", genero)
                 estado.set("fecha_nacimiento", str(fecha_nac))
                 estado.set("med_peso",     peso_lbs)
@@ -387,9 +387,11 @@ def mostrar():
     st.divider()
     st.subheader("Registros")
     try:
-        df = leer_df("medidas")
+        uid = estado.get("user_id", "")
+        df = leer_df_usuario("medidas", uid)
         if not df.empty:
-            st.dataframe(df.iloc[::-1].reset_index(drop=True),
+            cols = [c for c in df.columns if not c.startswith("_") and c != "user_id"]
+            st.dataframe(df[cols].iloc[::-1].reset_index(drop=True),
                          use_container_width=True, hide_index=True)
             st.divider()
             seccion_eliminar("medidas", df, "registros de medidas")
