@@ -25,13 +25,10 @@ SHEETS_CONFIG = {
         "descripcion", "url_youtube", "dificultad", "activo"
     ],
 }
-
 @st.cache_resource
 def get_client():
-    import json
-    credentials_info = json.loads(st.secrets["GOOGLE_CREDENTIALS"])
     creds = Credentials.from_service_account_info(
-        credentials_info,
+        st.secrets["gcp_service_account"],
         scopes=SCOPES,
     )
     return gspread.authorize(creds)
