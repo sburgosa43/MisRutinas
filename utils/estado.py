@@ -6,12 +6,15 @@ y los comparte en todos los módulos via st.session_state.
 import streamlit as st
 
 DEFAULTS = {
+    "genero":           "Mujer",
+    "fecha_nacimiento": "",
     "med_peso":     132.0,
     "med_altura":   165.0,
     "med_edad":     25,
+    "med_hombros":  100.0,
+    "med_pecho":    90.0,
     "med_cintura":  75.0,
     "med_cadera":   95.0,
-    "med_hombros":  100.0,
     "med_muslo_der": 55.0,
     "med_muslo_izq": 55.0,
     "med_brazo_der": 28.0,

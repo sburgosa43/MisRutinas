@@ -11,9 +11,13 @@ SCOPES = [
 SPREADSHEET_ID = "15nvtf4jxjq7yU-AZctGXnYst22BpgdFbX8gKQS71imM"
 
 SHEETS_CONFIG = {
-    "medidas":    ["fecha","edad","peso_lbs","altura_cm","cintura_cm","cadera_cm",
-                   "muslo_der_cm","muslo_izq_cm","brazo_der_cm","brazo_izq_cm",
-                   "hombros_cm","imc","rcc","rel_hombros_cintura","notas"],
+    "medidas": [
+        "fecha","genero","fecha_nacimiento","edad_calculada",
+        "peso_lbs","altura_cm",
+        "hombros_cm","pecho_cm","cintura_cm","cadera_cm",
+        "muslo_der_cm","muslo_izq_cm","brazo_der_cm","brazo_izq_cm",
+        "imc","rcc","rel_hombros_cintura","notas"
+    ],
     "evaluacion": ["fecha","parq_resultado","objetivo","nivel","zonas_enfoque",
                    "dias_semana","duracion_sesion","momento_entreno","equipo",
                    "lesiones","detalle_lesiones","horas_sueno","nivel_estres",
