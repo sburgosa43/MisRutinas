@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 from datetime import date, timedelta
 
+import streamlit.components.v1 as components
 import utils.estado as estado
 from utils.sheets import get_worksheet, leer_df
 from utils.ui_helpers import seccion_eliminar
@@ -140,7 +141,7 @@ def mostrar():
 
     with col_sil:
         st.subheader("Guía visual")
-        st.markdown(silhoueta_svg(genero), unsafe_allow_html=True)
+        components.html(silhoueta_svg(genero), height=380, scrolling=False)
 
     with col_med:
         st.subheader("Medidas corporales (cm)")
