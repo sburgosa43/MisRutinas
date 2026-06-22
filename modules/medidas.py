@@ -1,8 +1,8 @@
 import streamlit as st
+import streamlit.components.v1 as components
 import pandas as pd
 from datetime import date, timedelta
 
-import streamlit.components.v1 as components
 import utils.estado as estado
 from utils.sheets import get_worksheet, leer_df
 from utils.ui_helpers import seccion_eliminar
@@ -13,96 +13,159 @@ from utils.calculos import (calcular_imc, clasificar_imc,
 LBS_A_KG = 0.453592
 
 
-# ──────────────────────────────────────────────────────────────────────────────
-# SILHOUETA SVG
-# ──────────────────────────────────────────────────────────────────────────────
-
-def silhoueta_svg(genero: str) -> str:
-    c  = "#cbd5e1"   # color cuerpo
-    lc = "#818cf8"   # color líneas de medición
-
-    if genero == "Mujer":
-        cuerpo = f"""
-        <ellipse cx="80" cy="24"  rx="20" ry="22" fill="{c}"/>
-        <ellipse cx="80" cy="54"  rx="10" ry="13" fill="{c}"/>
-        <ellipse cx="80" cy="80"  rx="36" ry="18" fill="{c}"/>
-        <ellipse cx="80" cy="108" rx="29" ry="23" fill="{c}"/>
-        <ellipse cx="80" cy="137" rx="22" ry="18" fill="{c}"/>
-        <ellipse cx="80" cy="160" rx="34" ry="20" fill="{c}"/>
-        <ellipse cx="80" cy="178" rx="33" ry="15" fill="{c}"/>
-        <ellipse cx="35"  cy="115" rx="9"  ry="42" fill="{c}"/>
-        <ellipse cx="125" cy="115" rx="9"  ry="42" fill="{c}"/>
-        <ellipse cx="60"  cy="225" rx="18" ry="46" fill="{c}"/>
-        <ellipse cx="100" cy="225" rx="18" ry="46" fill="{c}"/>
-        <ellipse cx="58"  cy="293" rx="12" ry="35" fill="{c}"/>
-        <ellipse cx="102" cy="293" rx="12" ry="35" fill="{c}"/>"""
-        puntos = [(80,"Hombros"),(115,"Brazos"),(137,"Cintura"),(163,"Cadera"),(225,"Muslos")]
-        emoji = "👩 Mujer"
-
-    else:  # Hombre
-        cuerpo = f"""
-        <ellipse cx="80" cy="24"  rx="20" ry="22" fill="{c}"/>
-        <ellipse cx="80" cy="54"  rx="12" ry="13" fill="{c}"/>
-        <ellipse cx="80" cy="80"  rx="43" ry="19" fill="{c}"/>
-        <ellipse cx="80" cy="110" rx="35" ry="26" fill="{c}"/>
-        <ellipse cx="80" cy="143" rx="29" ry="20" fill="{c}"/>
-        <ellipse cx="80" cy="163" rx="28" ry="17" fill="{c}"/>
-        <ellipse cx="80" cy="178" rx="28" ry="13" fill="{c}"/>
-        <ellipse cx="30"  cy="116" rx="11" ry="44" fill="{c}"/>
-        <ellipse cx="130" cy="116" rx="11" ry="44" fill="{c}"/>
-        <ellipse cx="58"  cy="225" rx="21" ry="47" fill="{c}"/>
-        <ellipse cx="102" cy="225" rx="21" ry="47" fill="{c}"/>
-        <ellipse cx="56"  cy="293" rx="14" ry="35" fill="{c}"/>
-        <ellipse cx="104" cy="293" rx="14" ry="35" fill="{c}"/>"""
-        puntos = [(80,"Hombros"),(110,"Pecho"),(116,"Brazos"),(143,"Cintura"),(163,"Cadera"),(225,"Muslos")]
-        emoji = "👨 Hombre"
-
-    lineas = ""
-    for y, label in puntos:
-        lineas += f"""
-        <line x1="6" y1="{y}" x2="154" y2="{y}"
-              stroke="{lc}" stroke-width="1.2" stroke-dasharray="4,3" opacity="0.9"/>
-        <circle cx="6"   cy="{y}" r="2.5" fill="{lc}"/>
-        <circle cx="154" cy="{y}" r="2.5" fill="{lc}"/>"""
-
-    return f"""
-    <div style="background:#f1f5f9;border-radius:12px;padding:12px 6px;
-                text-align:center;border:1px solid #e2e8f0;">
-      <p style="font-size:12px;font-weight:600;color:#475569;margin:0 0 6px 0;">
-        {emoji} — Puntos de medición</p>
-      <svg viewBox="0 0 160 340" xmlns="http://www.w3.org/2000/svg"
-           style="width:100%;max-width:150px;height:auto;">
-        {cuerpo}
-        {lineas}
-      </svg>
-      <p style="font-size:10px;color:#94a3b8;margin:6px 0 0 0;">
-        Las líneas muestran dónde medir</p>
-    </div>"""
-
-
-# ──────────────────────────────────────────────────────────────────────────────
-# HELPERS
-# ──────────────────────────────────────────────────────────────────────────────
-
 def calcular_edad(fecha_nac: date) -> int:
     hoy = date.today()
     return hoy.year - fecha_nac.year - ((hoy.month, hoy.day) < (fecha_nac.month, fecha_nac.day))
 
 
-# ──────────────────────────────────────────────────────────────────────────────
-# MÓDULO PRINCIPAL
-# ──────────────────────────────────────────────────────────────────────────────
+def silhoueta_svg(genero: str) -> str:
+    """SVG silhouette inspired by flat body measurement diagrams."""
+
+    if genero == "Mujer":
+        cc = "#f4b8b0"   # body color salmon
+        ch = "#c47560"   # hair color
+
+        hair = f"""
+        <path d="M58,34 C54,16 62,4 74,2 C68,10 66,22 68,32 Z" fill="{ch}"/>
+        <path d="M68,30 C66,14 72,2 82,2 C90,0 100,6 104,16
+                 C108,8 112,2 120,4 C114,12 112,24 112,36
+                 C116,28 120,18 120,10 C122,22 120,36 116,48
+                 C120,42 122,32 120,24 C120,38 116,54 110,66
+                 C114,58 116,46 114,36 C108,56 100,70 94,80
+                 L80,76 C72,62 66,46 62,32 Z" fill="{ch}"/>"""
+
+        head = f'<ellipse cx="80" cy="38" rx="27" ry="30" fill="{cc}"/>'
+        neck = f'<path d="M73,66 L73,82 L87,82 L87,66 C87,72 84,76 80,76 C76,76 73,72 73,66 Z" fill="{cc}"/>'
+
+        body = f"""
+        <path d="
+          M73,80 C61,80 45,84 37,94 C29,104 28,116 30,126
+          C32,134 38,140 42,142 C38,154 38,164 40,172
+          C42,180 46,186 44,194 C42,202 36,206 36,214
+          L40,214 C40,228 42,268 42,280 L42,355
+          C42,364 46,370 52,372 C58,374 64,370 66,364
+          C68,358 68,352 68,345 L68,280
+          C72,272 76,268 80,268 C84,268 88,272 92,280
+          L92,345 C92,352 92,358 94,364 C96,370 102,374 108,372
+          C114,370 118,364 118,355 L118,280
+          C118,268 120,228 120,214 L124,214
+          C124,206 118,202 116,194 C114,186 118,180 120,172
+          C122,164 122,154 118,142 C122,140 128,134 130,126
+          C132,116 131,104 123,94 C115,84 99,80 87,80 Z
+        " fill="{cc}"/>"""
+
+        arms = f"""
+        <path d="M37,96 C28,102 22,114 20,128 L15,192 C14,202 16,208 20,210
+                 L28,208 C26,202 26,194 28,184 L33,128 C35,116 40,106 44,100 Z" fill="{cc}"/>
+        <path d="M123,96 C132,102 138,114 140,128 L145,192 C146,202 144,208 140,210
+                 L132,208 C134,202 134,194 132,184 L127,128 C125,116 120,106 116,100 Z" fill="{cc}"/>"""
+
+        feet = f"""
+        <path d="M42,370 C40,374 38,378 40,382 L70,382 C72,378 70,372 68,370 Z" fill="{cc}"/>
+        <path d="M92,370 C90,374 88,378 90,382 L120,382 C122,378 120,372 118,370 Z" fill="{cc}"/>"""
+
+        puntos = [(92,"Hombros"),(130,"Brazos"),(165,"Cintura"),(196,"Cadera"),(300,"Muslos")]
+
+    else:  # Hombre
+        cc = "#86c9e8"
+        ch = "#5aabb8"
+
+        hair = f"""
+        <path d="M52,24 C50,8 58,0 72,0 C82,-2 94,0 102,6 C110,12 114,22 112,32
+                 C114,22 112,10 106,4 C114,12 116,24 114,36
+                 C118,26 118,14 112,6 C120,16 120,30 116,44 L52,44 Z" fill="{ch}"/>"""
+
+        head = f'<ellipse cx="80" cy="36" rx="27" ry="28" fill="{cc}"/>'
+        neck = f'<path d="M72,62 L72,78 L88,78 L88,62 C88,68 85,72 80,72 C75,72 72,68 72,62 Z" fill="{cc}"/>'
+
+        body = f"""
+        <path d="
+          M72,76 C58,76 38,80 28,92 C18,104 18,118 22,128
+          C26,138 32,142 38,144 C34,156 34,166 36,176
+          C38,184 40,190 38,198 C36,204 30,208 30,216
+          L36,216 C36,230 38,268 38,280 L38,355
+          C38,364 42,370 48,372 C54,374 60,370 62,364
+          C64,358 64,350 64,344 L64,280
+          C70,272 76,268 80,268 C84,268 90,272 96,280
+          L96,344 C96,350 96,358 98,364 C100,370 106,374 112,372
+          C118,370 122,364 122,355 L122,280
+          C122,268 124,230 124,216 L130,216
+          C130,208 124,204 122,198 C120,190 122,184 124,176
+          C126,166 126,156 122,144 C128,142 134,138 138,128
+          C142,118 142,104 132,92 C122,80 102,76 88,76 Z
+        " fill="{cc}"/>"""
+
+        arms = f"""
+        <path d="M27,94 C16,100 10,114 8,130 L3,196 C2,206 4,213 8,215
+                 L18,213 C16,207 16,198 18,188 L23,130 C25,118 30,106 36,98 Z" fill="{cc}"/>
+        <path d="M133,94 C144,100 150,114 152,130 L157,196 C158,206 156,213 152,215
+                 L142,213 C144,207 144,198 142,188 L137,130 C135,118 130,106 124,98 Z" fill="{cc}"/>"""
+
+        feet = f"""
+        <path d="M38,370 C36,374 34,378 36,382 L66,382 C68,378 66,372 64,370 Z" fill="{cc}"/>
+        <path d="M96,370 C94,374 92,378 94,382 L124,382 C126,378 124,372 122,370 Z" fill="{cc}"/>"""
+
+        puntos = [(90,"Hombros"),(116,"Pecho"),(132,"Brazos"),(168,"Cintura"),(198,"Cadera"),(300,"Muslos")]
+
+    # Build measurement lines with numbered circles
+    lc = "#9ca3af"
+    lines_svg = ""
+    for i, (y, label) in enumerate(puntos, 1):
+        lines_svg += f"""
+        <line x1="22" y1="{y}" x2="138" y2="{y}"
+              stroke="{lc}" stroke-width="1.1" stroke-dasharray="5,4"/>
+        <circle cx="22" cy="{y}" r="9" fill="#f3f4f6" stroke="{lc}" stroke-width="1"/>
+        <text x="22" y="{y+4}" text-anchor="middle"
+              font-size="8" fill="#374151" font-family="sans-serif" font-weight="600">{i}</text>
+        <circle cx="138" cy="{y}" r="9" fill="#f3f4f6" stroke="{lc}" stroke-width="1"/>
+        <text x="138" y="{y+4}" text-anchor="middle"
+              font-size="8" fill="#374151" font-family="sans-serif" font-weight="600">{i}</text>"""
+
+    # Legend
+    legend = ""
+    for i, (y, label) in enumerate(puntos, 1):
+        legend += f'<text x="10" y="{22 + (i-1)*18}" font-size="10" fill="#374151" font-family="sans-serif"><tspan font-weight="600" fill="#6366f1">{i}.</tspan> {label}</text>'
+
+    emoji = "👩 Mujer" if genero == "Mujer" else "👨 Hombre"
+
+    return f"""<!DOCTYPE html>
+<html><body style="margin:0;padding:0;background:#f9fafb;font-family:sans-serif;">
+<div style="display:flex;align-items:flex-start;gap:12px;padding:12px;
+            background:#f9fafb;border-radius:12px;border:1px solid #e5e7eb;">
+  <div style="text-align:center;">
+    <p style="font-size:11px;color:#6b7280;margin:0 0 6px 0;font-weight:600;">{emoji}</p>
+    <svg viewBox="0 0 160 395" xmlns="http://www.w3.org/2000/svg"
+         style="width:160px;height:auto;display:block;">
+      {hair}
+      {head}
+      {neck}
+      {body}
+      {arms}
+      {feet}
+      {lines_svg}
+    </svg>
+  </div>
+  <div style="padding-top:28px;">
+    <p style="font-size:11px;color:#6b7280;margin:0 0 8px 0;font-weight:600;">Puntos de medición</p>
+    <svg viewBox="0 0 120 {len(puntos)*18+10}" xmlns="http://www.w3.org/2000/svg"
+         style="width:120px;height:auto;display:block;">
+      {legend}
+    </svg>
+  </div>
+</div>
+</body></html>"""
+
 
 def mostrar():
     estado.cargar_perfil()
 
     st.title("📊 Mis Medidas")
-    st.caption("Los campos se pre-llenan con tu último registro. Las líneas en la silueta indican dónde tomar cada medida.")
+    st.caption("Los campos se pre-llenan con tu último registro guardado.")
     st.divider()
 
-    # ── 1. Datos generales (fila completa) ───────────────────────────────
+    # ── Datos generales ───────────────────────────────────────────────────
     st.subheader("Datos generales")
-    g1, g2, g3, g4 = st.columns([1, 1, 1, 1])
+    g1, g2, g3, g4 = st.columns(4)
 
     with g1:
         genero = st.radio("Género", ["Mujer", "Hombre"],
@@ -112,19 +175,14 @@ def mostrar():
 
     with g2:
         hoy = date.today()
-        fn_default = estado.get("fecha_nacimiento", None)
-        if fn_default and isinstance(fn_default, str):
-            try:
-                fn_default = date.fromisoformat(fn_default)
-            except Exception:
-                fn_default = None
-        fn_default = fn_default or date(hoy.year - 25, hoy.month, hoy.day)
-        fecha_nac = st.date_input("Fecha de nacimiento",
-                                   value=fn_default,
-                                   max_value=hoy - timedelta(days=365*10),
-                                   format="DD/MM/YYYY")
-        edad_calc = calcular_edad(fecha_nac)
-        st.caption(f"Edad calculada: **{edad_calc} años**")
+        fn_def = estado.get("fecha_nacimiento", None)
+        if fn_def and isinstance(fn_def, str):
+            try: fn_def = date.fromisoformat(fn_def)
+            except: fn_def = None
+        fn_def = fn_def or date(hoy.year-25, 1, 1)
+        fecha_nac = st.date_input("Fecha de nacimiento", value=fn_def,
+                                   max_value=hoy-timedelta(days=365*10), format="DD/MM/YYYY")
+        st.caption(f"Edad: **{calcular_edad(fecha_nac)} años**")
 
     with g3:
         peso_lbs = st.number_input("Peso (lbs)", 66.0, 440.0,
@@ -136,57 +194,53 @@ def mostrar():
 
     st.divider()
 
-    # ── 2. Silueta + Medidas corporales ───────────────────────────────────
+    # ── Silueta + Medidas ─────────────────────────────────────────────────
     col_sil, col_med = st.columns([1, 1], gap="large")
 
     with col_sil:
-        st.subheader("Guía visual")
-        components.html(silhoueta_svg(genero), height=380, scrolling=False)
+        st.subheader("Guía de medición")
+        components.html(silhoueta_svg(genero), height=440, scrolling=False)
 
     with col_med:
         st.subheader("Medidas corporales (cm)")
 
-        hombros = st.number_input("Hombros",
-            min_value=50.0, max_value=200.0,
-            value=estado.get("med_hombros", 100.0), step=0.5, format="%.1f")
+        # 2 por fila
+        r1c1, r1c2 = st.columns(2)
+        with r1c1:
+            hombros = st.number_input("Hombros", 50.0, 200.0,
+                estado.get("med_hombros",100.0), 0.5, format="%.1f")
+        with r1c2:
+            label_pecho = "Pecho / Busto" if genero == "Mujer" else "Pecho"
+            pecho = st.number_input(label_pecho, 50.0, 200.0,
+                estado.get("med_pecho",90.0), 0.5, format="%.1f")
 
-        # Pecho — mostrar para ambos pero con label contextual
-        label_pecho = "Pecho / Busto" if genero == "Mujer" else "Pecho"
-        pecho = st.number_input(label_pecho,
-            min_value=50.0, max_value=200.0,
-            value=estado.get("med_pecho", 90.0), step=0.5, format="%.1f")
+        r2c1, r2c2 = st.columns(2)
+        with r2c1:
+            brazo_der = st.number_input("Brazo derecho", 15.0, 60.0,
+                estado.get("med_brazo_der",28.0), 0.5, format="%.1f")
+        with r2c2:
+            brazo_izq = st.number_input("Brazo izquierdo", 15.0, 60.0,
+                estado.get("med_brazo_izq",28.0), 0.5, format="%.1f")
 
-        col_b1, col_b2 = st.columns(2)
-        with col_b1:
-            brazo_der = st.number_input("Brazo derecho",
-                min_value=15.0, max_value=60.0,
-                value=estado.get("med_brazo_der", 28.0), step=0.5, format="%.1f")
-        with col_b2:
-            brazo_izq = st.number_input("Brazo izquierdo",
-                min_value=15.0, max_value=60.0,
-                value=estado.get("med_brazo_izq", 28.0), step=0.5, format="%.1f")
+        r3c1, r3c2 = st.columns(2)
+        with r3c1:
+            cintura = st.number_input("Cintura", 40.0, 200.0,
+                estado.get("med_cintura",75.0), 0.5, format="%.1f")
+        with r3c2:
+            cadera = st.number_input("Cadera", 50.0, 200.0,
+                estado.get("med_cadera",95.0), 0.5, format="%.1f")
 
-        cintura = st.number_input("Cintura",
-            min_value=40.0, max_value=200.0,
-            value=estado.get("med_cintura", 75.0), step=0.5, format="%.1f")
+        r4c1, r4c2 = st.columns(2)
+        with r4c1:
+            muslo_der = st.number_input("Muslo derecho", 20.0, 100.0,
+                estado.get("med_muslo_der",55.0), 0.5, format="%.1f")
+        with r4c2:
+            muslo_izq = st.number_input("Muslo izquierdo", 20.0, 100.0,
+                estado.get("med_muslo_izq",55.0), 0.5, format="%.1f")
 
-        cadera = st.number_input("Cadera",
-            min_value=50.0, max_value=200.0,
-            value=estado.get("med_cadera", 95.0), step=0.5, format="%.1f")
+        notas = st.text_area("Notas", placeholder="Observaciones opcionales...", height=60)
 
-        col_m1, col_m2 = st.columns(2)
-        with col_m1:
-            muslo_der = st.number_input("Muslo derecho",
-                min_value=20.0, max_value=100.0,
-                value=estado.get("med_muslo_der", 55.0), step=0.5, format="%.1f")
-        with col_m2:
-            muslo_izq = st.number_input("Muslo izquierdo",
-                min_value=20.0, max_value=100.0,
-                value=estado.get("med_muslo_izq", 55.0), step=0.5, format="%.1f")
-
-        notas = st.text_area("Notas", placeholder="Observaciones opcionales...", height=68)
-
-    # ── 3. Cálculos automáticos ───────────────────────────────────────────
+    # ── Cálculos ──────────────────────────────────────────────────────────
     peso_kg = peso_lbs * LBS_A_KG
     imc     = calcular_imc(peso_kg, altura)
     rcc     = calcular_rcc(cintura, cadera)
@@ -194,8 +248,7 @@ def mostrar():
 
     st.divider()
     st.subheader("Cálculos automáticos")
-    m1, m2, m3 = st.columns(3, gap="medium")
-
+    m1, m2, m3 = st.columns(3)
     with m1:
         if imc:
             cat, _ = clasificar_imc(imc)
@@ -203,7 +256,7 @@ def mostrar():
     with m2:
         if rcc:
             cat, _ = clasificar_rcc_mujer(rcc)
-            st.metric("Relación Cintura-Cadera (RCC)", f"{rcc}", cat)
+            st.metric("Relación Cintura-Cadera", f"{rcc}", cat)
     with m3:
         if rel_hc:
             ref = "✅ Figura atlética" if rel_hc >= 1.4 else "Por mejorar"
@@ -211,44 +264,41 @@ def mostrar():
 
     st.divider()
 
-    # ── 4. Guardar ────────────────────────────────────────────────────────
-    fecha_registro = date.today()
+    # ── Guardar ───────────────────────────────────────────────────────────
     if st.button("💾 Guardar registro", type="primary", use_container_width=True):
         with st.spinner("Guardando..."):
             try:
                 ws = get_worksheet("medidas")
                 ws.append_row([
-                    str(fecha_registro), genero, str(fecha_nac), edad_calc,
+                    str(date.today()), genero, str(fecha_nac), calcular_edad(fecha_nac),
                     float(peso_lbs), float(altura),
                     float(hombros), float(pecho),
                     float(cintura), float(cadera),
                     float(muslo_der), float(muslo_izq),
                     float(brazo_der), float(brazo_izq),
-                    imc, rcc, rel_hc,
-                    notas.strip()
+                    imc, rcc, rel_hc, notas.strip()
                 ])
-                # Actualizar estado de sesión
-                estado.set("genero",         genero)
+                estado.set("genero", genero)
                 estado.set("fecha_nacimiento", str(fecha_nac))
-                estado.set("med_peso",       peso_lbs)
-                estado.set("med_altura",     altura)
-                estado.set("med_hombros",    hombros)
-                estado.set("med_pecho",      pecho)
-                estado.set("med_cintura",    cintura)
-                estado.set("med_cadera",     cadera)
-                estado.set("med_muslo_der",  muslo_der)
-                estado.set("med_muslo_izq",  muslo_izq)
-                estado.set("med_brazo_der",  brazo_der)
-                estado.set("med_brazo_izq",  brazo_izq)
-                st.success("✅ Registro guardado correctamente.")
+                estado.set("med_peso",     peso_lbs)
+                estado.set("med_altura",   altura)
+                estado.set("med_hombros",  hombros)
+                estado.set("med_pecho",    pecho)
+                estado.set("med_cintura",  cintura)
+                estado.set("med_cadera",   cadera)
+                estado.set("med_muslo_der", muslo_der)
+                estado.set("med_muslo_izq", muslo_izq)
+                estado.set("med_brazo_der", brazo_der)
+                estado.set("med_brazo_izq", brazo_izq)
+                st.success("✅ Registro guardado.")
                 st.balloons()
             except Exception as e:
                 st.error(f"Error al guardar: {e}")
                 st.exception(e)
 
-    # ── 5. Historial ──────────────────────────────────────────────────────
+    # ── Historial ─────────────────────────────────────────────────────────
     st.divider()
-    st.subheader("Registros recientes")
+    st.subheader("Registros")
     try:
         df = leer_df("medidas")
         if not df.empty:
