@@ -46,16 +46,10 @@ def silhoueta_html(genero: str) -> str:
             Sube <code>siluetas.jpg</code> a la carpeta <code>assets/</code> del repo.</p>
         </div>"""
 
-    # Female = left half, Male = right half
-    # CSS trick: container clips to 50% width, image is 200% wide, shifted for male
-    margin = "0" if genero == "Mujer" else "-100%"
-    label  = "👩 Mujer" if genero == "Mujer" else "👨 Hombre"
-
     return f"""<div style="background:white;border-radius:10px;padding:8px;border:1px solid #e5e7eb;">
-  <p style="margin:0 0 6px 0;font-size:11px;font-weight:600;color:#6b7280;font-family:sans-serif;text-align:center;">{label} — guía de medición</p>
-  <div style="width:100%;overflow:hidden;border-radius:6px;">
-    <img src="{img_src}"
-         style="width:200%;max-width:none;margin-left:{margin};display:block;height:auto;"/>
+  <p style="margin:0 0 6px 0;font-size:11px;font-weight:600;color:#6b7280;font-family:sans-serif;text-align:center;">Guía de medición</p>
+  <div style="width:100%;border-radius:6px;">
+    <img src="{img_src}" style="width:100%;display:block;height:auto;border-radius:6px;"/>
   </div>
 </div>"""
 
@@ -97,16 +91,10 @@ def silhoueta_html(genero: str) -> str:
             Sube <code>siluetas.jpg</code> a la carpeta <code>assets/</code> del repo.</p>
         </div>"""
 
-    # Female = left half, Male = right half
-    # CSS trick: container clips to 50% width, image is 200% wide, shifted for male
-    margin = "0" if genero == "Mujer" else "-100%"
-    label  = "👩 Mujer" if genero == "Mujer" else "👨 Hombre"
-
     return f"""<div style="background:white;border-radius:10px;padding:8px;border:1px solid #e5e7eb;">
-  <p style="margin:0 0 6px 0;font-size:11px;font-weight:600;color:#6b7280;font-family:sans-serif;text-align:center;">{label} — guía de medición</p>
-  <div style="width:100%;overflow:hidden;border-radius:6px;">
-    <img src="{img_src}"
-         style="width:200%;max-width:none;margin-left:{margin};display:block;height:auto;"/>
+  <p style="margin:0 0 6px 0;font-size:11px;font-weight:600;color:#6b7280;font-family:sans-serif;text-align:center;">Guía de medición</p>
+  <div style="width:100%;border-radius:6px;">
+    <img src="{img_src}" style="width:100%;display:block;height:auto;border-radius:6px;"/>
   </div>
 </div>"""
 
@@ -279,6 +267,7 @@ def mostrar():
             except: fn_def = None
         fn_def = fn_def or date(hoy.year-25, 1, 1)
         fecha_nac = st.date_input("Fecha de nacimiento", value=fn_def,
+                                   min_value=date(1980, 1, 1),
                                    max_value=hoy-timedelta(days=365*10), format="DD/MM/YYYY")
         st.caption(f"Edad: **{calcular_edad(fecha_nac)} años**")
 
