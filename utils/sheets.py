@@ -26,11 +26,12 @@ SHEETS_CONFIG = {
     ],
 }
 
-
 @st.cache_resource
 def get_client():
+    import json
+    credentials_info = json.loads(st.secrets["GOOGLE_CREDENTIALS"])
     creds = Credentials.from_service_account_info(
-        st.secrets["gcp_service_account"],
+        credentials_info,
         scopes=SCOPES,
     )
     return gspread.authorize(creds)
