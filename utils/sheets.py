@@ -37,12 +37,11 @@ def get_client():
     return gspread.authorize(creds)
 
 
+SPREADSHEET_ID = "15nvtf4jxjq7yU-AZctGXnYst22BpgdFbX8gKQS71imM"
+
 def get_spreadsheet():
     client = get_client()
-    try:
-        return client.open(SPREADSHEET_NAME)
-    except gspread.SpreadsheetNotFound:
-        return _crear_spreadsheet(client)
+    return client.open_by_key(SPREADSHEET_ID)
 
 
 def _crear_spreadsheet(client):
