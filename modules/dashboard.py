@@ -1,148 +1,91 @@
 import streamlit as st
 import pandas as pd
 import plotly.graph_objects as go
-from datetime import date, timedelta
+from datetime import date
 
-from utils.sheets import get_worksheet
+import utils.estado as estado
+from utils.sheets import leer_df
 from utils.calculos import calcular_imc, clasificar_imc, calcular_rcc, clasificar_rcc_mujer
 
 
-def gauge_chart(valor, minimo, maximo, titulo, rangos_color):
-    """Crea un gauge chart con Plotly."""
+def gauge(valor, minimo, maximo, titulo, rangos):
     fig = go.Figure(go.Indicator(
-        mode="gauge+number",
-        value=valor,
+        mode="gauge+number", value=valor,
         title={"text": titulo, "font": {"size": 13}},
-        gauge={
-            "axis": {"range": [minimo, maximo], "tickwidth": 1},
-            "bar": {"color": "#6366f1"},
-            "steps": rangos_color,
-            "threshold": {
-                "line": {"color": "#1e293b", "width": 3},
-                "thickness": 0.75,
-                "value": valor,
-            },
-        },
+        gauge={"axis": {"range": [minimo, maximo]}, "bar": {"color": "#6366f1"},
+               "steps": rangos,
+               "threshold": {"line": {"color": "#1e293b", "width": 3}, "thickness": 0.75, "value": valor}},
     ))
     fig.update_layout(height=200, margin=dict(t=40, b=10, l=20, r=20))
     return fig
 
 
 def mostrar():
-    st.title("🏠 Dashboard")
+    estado.cargar_perfil()
+    nombre = estado.get("nombre_usuario", "")
+    st.title(f"🏠 Dashboard {f'— {nombre}' if nombre and nombre != 'Mi Rutina' else ''}")
 
-    # ── Cargar datos ───────────────────────────────────────────────────────
     try:
-        ws  = get_worksheet("medidas")
-        data = ws.get_all_records()
-        df  = pd.DataFrame(data) if data else pd.DataFrame()
+        df = leer_df("medidas")
     except Exception as e:
         st.error(f"Error conectando a Google Sheets: {e}")
-        st.info("Configura la conexión en el módulo de Diagnóstico.")
+        st.info("Configura la conexión en el módulo 🔧 Diagnóstico.")
         return
 
-    tiene_datos = not df.empty
-
-    # ── Bienvenida ─────────────────────────────────────────────────────────
-    hoy = date.today()
-    hora = hoy.strftime("%A %d de %B")
-    st.markdown(f"### 👋 ¡Hola! Hoy es {hora}")
-    st.divider()
-
-    if not tiene_datos:
+    if df.empty:
         st.info("📋 Aún no hay registros. Ve a **📊 Mis Medidas** para agregar tu primer registro.")
         return
 
-    # ── Último registro ────────────────────────────────────────────────────
-    ultimo = df.iloc[-1]
+    u = df.iloc[-1]
+    peso = float(u.get("peso_lbs", 0))
+    cintura = float(u.get("cintura_cm", 0))
+    cadera = float(u.get("cadera_cm", 0))
+    imc_v = float(u.get("imc", 0)) if u.get("imc") else None
+    rcc_v = float(u.get("rcc", 0)) if u.get("rcc") else None
 
     st.subheader("📌 Último registro")
     c1, c2, c3, c4 = st.columns(4)
-
-    peso     = float(ultimo.get("peso_lbs", 0))
-    altura   = float(ultimo.get("altura_cm", 0))
-    cintura  = float(ultimo.get("cintura_cm", 0))
-    cadera   = float(ultimo.get("cadera_cm", 0))
-    imc_val  = float(ultimo.get("imc", 0)) if ultimo.get("imc") else None
-    rcc_val  = float(ultimo.get("rcc", 0)) if ultimo.get("rcc") else None
-
-    with c1:
-        delta_peso = None
-        if len(df) >= 2:
-            delta_peso = round(peso - float(df.iloc[-2].get("peso_lbs", peso)), 1)
-        st.metric("⚖️ Peso", f"{peso} lbs",
-                  delta=f"{delta_peso:+.1f} lbs" if delta_peso is not None else None,
-                  delta_color="inverse")
-    with c2:
-        st.metric("📏 Cintura", f"{cintura} cm")
-    with c3:
-        st.metric("🍑 Cadera", f"{cadera} cm")
-    with c4:
-        st.metric("📅 Fecha", str(ultimo.get("fecha", "—")))
+    delta = round(peso - float(df.iloc[-2].get("peso_lbs", peso)), 1) if len(df) >= 2 else None
+    c1.metric("⚖️ Peso", f"{peso} lbs", f"{delta:+.1f} lbs" if delta else None, delta_color="inverse")
+    c2.metric("📏 Cintura", f"{cintura} cm")
+    c3.metric("🍑 Cadera", f"{cadera} cm")
+    c4.metric("📅 Fecha", str(u.get("fecha", "—")))
 
     st.divider()
-
-    # ── Gauges ────────────────────────────────────────────────────────────
     st.subheader("🎯 Indicadores clave")
     g1, g2 = st.columns(2)
-
     with g1:
-        if imc_val:
-            cat_imc, _ = clasificar_imc(imc_val)
-            fig_imc = gauge_chart(
-                imc_val, 14, 40, f"IMC — {cat_imc}",
-                [
-                    {"range": [14, 18.5], "color": "#fef9c3"},
-                    {"range": [18.5, 25],  "color": "#dcfce7"},
-                    {"range": [25, 30],    "color": "#fef3c7"},
-                    {"range": [30, 40],    "color": "#fee2e2"},
-                ]
-            )
-            st.plotly_chart(fig_imc, use_container_width=True)
-
+        if imc_v:
+            cat, _ = clasificar_imc(imc_v)
+            st.plotly_chart(gauge(imc_v, 14, 40, f"IMC — {cat}",
+                [{"range":[14,18.5],"color":"#fef9c3"},{"range":[18.5,25],"color":"#dcfce7"},
+                 {"range":[25,30],"color":"#fef3c7"},{"range":[30,40],"color":"#fee2e2"}]),
+                use_container_width=True)
     with g2:
-        if rcc_val:
-            cat_rcc, _ = clasificar_rcc_mujer(rcc_val)
-            fig_rcc = gauge_chart(
-                rcc_val, 0.6, 1.1, f"RCC — {cat_rcc}",
-                [
-                    {"range": [0.6, 0.80],  "color": "#dcfce7"},
-                    {"range": [0.80, 0.85], "color": "#fef3c7"},
-                    {"range": [0.85, 1.1],  "color": "#fee2e2"},
-                ]
-            )
-            st.plotly_chart(fig_rcc, use_container_width=True)
+        if rcc_v:
+            cat, _ = clasificar_rcc_mujer(rcc_v)
+            st.plotly_chart(gauge(rcc_v, 0.6, 1.1, f"RCC — {cat}",
+                [{"range":[0.6,0.80],"color":"#dcfce7"},{"range":[0.80,0.85],"color":"#fef3c7"},
+                 {"range":[0.85,1.1],"color":"#fee2e2"}]),
+                use_container_width=True)
 
-    st.divider()
-
-    # ── Tendencia de peso ──────────────────────────────────────────────────
     if len(df) >= 2:
+        st.divider()
         st.subheader("📈 Tendencia de peso")
-        df_plot = df[df["peso_lbs"] != ""].copy()
-        df_plot["peso_lbs"] = pd.to_numeric(df_plot["peso_lbs"], errors="coerce")
-        df_plot = df_plot.dropna(subset=["peso_lbs"])
-
+        df_p = df.copy()
+        df_p["peso_lbs"] = pd.to_numeric(df_p["peso_lbs"], errors="coerce")
+        df_p = df_p.dropna(subset=["peso_lbs"])
         fig = go.Figure()
-        fig.add_trace(go.Scatter(
-            x=df_plot["fecha"],
-            y=df_plot["peso_lbs"],
-            mode="lines+markers",
-            name="Peso (lbs)",
-            line=dict(color="#6366f1", width=2),
-            marker=dict(size=7),
-        ))
-        fig.update_layout(
-            height=250,
-            margin=dict(t=10, b=30, l=40, r=20),
-            xaxis_title="Fecha",
-            yaxis_title="Peso (lbs)",
-            plot_bgcolor="white",
-            paper_bgcolor="white",
-        )
-        fig.update_xaxes(showgrid=False)
+        fig.add_trace(go.Scatter(x=df_p["fecha"], y=df_p["peso_lbs"],
+            mode="lines+markers", line=dict(color="#6366f1", width=2), marker=dict(size=7)))
+        fig.update_layout(height=250, margin=dict(t=10,b=30,l=40,r=20),
+            xaxis_title="Fecha", yaxis_title="Peso (lbs)",
+            plot_bgcolor="white", paper_bgcolor="white")
         fig.update_yaxes(showgrid=True, gridcolor="#f1f5f9")
         st.plotly_chart(fig, use_container_width=True)
 
-    # ── Total registros ────────────────────────────────────────────────────
     st.divider()
-    st.caption(f"📊 Total de registros: {len(df)}  |  Primer registro: {df.iloc[0].get('fecha', '—')}  |  Último: {df.iloc[-1].get('fecha', '—')}")
+    obj = estado.get("eval_objetivo", "")
+    if obj:
+        st.caption(f"🎯 Objetivo: {obj}")
+    st.caption(f"📊 {len(df)} registro(s) · Primer: {df.iloc[0].get('fecha','—')} · Último: {df.iloc[-1].get('fecha','—')}")
