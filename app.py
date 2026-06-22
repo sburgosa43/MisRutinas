@@ -26,13 +26,15 @@ div[data-testid="stMetric"] {
 """, unsafe_allow_html=True)
 
 PAGES = [
-    ("🏠 Dashboard",             "modules.dashboard"),
-    ("📊 Mis Medidas",           "modules.medidas"),
-    ("📈 Progreso",              "modules.progreso"),
-    ("⚡ Calculadoras",          "modules.calculadoras"),
-    ("🏋️ Rutinas",              "modules.rutinas"),
-    ("⚙️ Configuración",        "modules.configuracion"),
-    ("🔧 Diagnóstico",           "modules.diagnostico"),
+    ("🏠 Dashboard",          "modules.dashboard"),
+    ("🧬 Evaluación",         "modules.evaluacion"),
+    ("📊 Mis Medidas",        "modules.medidas"),
+    ("📈 Progreso",           "modules.progreso"),
+    ("🌙 Ciclo Menstrual",    "modules.ciclo"),
+    ("⚡ Calculadoras",       "modules.calculadoras"),
+    ("🏋️ Rutinas",           "modules.rutinas"),
+    ("⚙️ Configuración",     "modules.configuracion"),
+    ("🔧 Diagnóstico",        "modules.diagnostico"),
 ]
 
 with st.sidebar:
@@ -41,7 +43,7 @@ with st.sidebar:
     st.divider()
     selection = st.radio("nav", [p[0] for p in PAGES], label_visibility="collapsed")
     st.divider()
-    st.caption("v1.1")
+    st.caption("v1.2")
 
 module_name = next(m for name, m in PAGES if name == selection)
 try:
