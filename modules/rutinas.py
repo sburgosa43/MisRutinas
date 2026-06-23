@@ -1,7 +1,620 @@
 import streamlit as st
-import utils.estado as estado
+import pandas as pd
+from datetime import date
 
+import utils.estado as estado
+from utils.sheets import leer_df_usuario, guardar_fila_usuario
+from data.coaches import COACHES, coaches_por_objetivo
+
+# ══════════════════════════════════════════════════════════════════════════════
+# BASE DE EJERCICIOS
+# ══════════════════════════════════════════════════════════════════════════════
+EJERCICIOS_BASE = [
+    # ── GLÚTEOS ──────────────────────────────────────────────────────────────
+    {"id":"g01","nombre":"Hip Thrust con barra","grupo":"Glúteos",
+     "descripcion":"El ejercicio #1 para glúteos según la ciencia (Contreras 2015). Espaldas en banco, barra sobre caderas, empuja con talones apretando glúteos en la cima. Pausa 1 seg arriba.",
+     "equipo":["barra","banco"],"dificultad":"intermedio",
+     "objetivo":["recomposicion","hipertrofia","fuerza"],
+     "lesiones_evitar":[],"coach":"Bret Contreras",
+     "url":"https://www.youtube.com/@BretContreras1"},
+    {"id":"g02","nombre":"Hip Thrust con mancuerna","grupo":"Glúteos",
+     "descripcion":"Versión accesible del Hip Thrust. Ideal para casa con equipo básico. Mismo patrón de movimiento, mismos resultados.",
+     "equipo":["mancuernas","banco"],"dificultad":"principiante",
+     "objetivo":["recomposicion","hipertrofia"],"lesiones_evitar":[],
+     "coach":"Heather Robertson","url":"https://www.youtube.com/results?search_query=dumbbell+hip+thrust+tutorial"},
+    {"id":"g03","nombre":"Glute Bridge (peso corporal)","grupo":"Glúteos",
+     "descripcion":"Sin equipo. Acuéstate boca arriba, pies apoyados, eleva caderas apretando glúteos. Progresa a una sola pierna.",
+     "equipo":["ninguno","mat"],"dificultad":"principiante",
+     "objetivo":["recomposicion","salud"],"lesiones_evitar":[],
+     "coach":"Heather Robertson","url":"https://www.youtube.com/results?search_query=glute+bridge+tutorial+form"},
+    {"id":"g04","nombre":"Bulgarian Split Squat","grupo":"Glúteos",
+     "descripcion":"Pie trasero en banco, pie delantero al frente. Baja rodilla al suelo. Excelente para glúteos y cuádriceps. Añade mancuernas para progresar.",
+     "equipo":["ninguno","banco","mancuernas"],"dificultad":"intermedio",
+     "objetivo":["recomposicion","hipertrofia","fuerza"],"lesiones_evitar":["Rodillas"],
+     "coach":"Jeff Nippard","url":"https://www.youtube.com/results?search_query=bulgarian+split+squat+tutorial+jeff+nippard"},
+    {"id":"g05","nombre":"Donkey Kick","grupo":"Glúteos",
+     "descripcion":"En cuadrupedia, lleva un talón al techo contrayendo el glúteo. Controla el descenso. Añade tobillera con peso para progresar.",
+     "equipo":["ninguno","mat"],"dificultad":"principiante",
+     "objetivo":["recomposicion","salud"],"lesiones_evitar":[],
+     "coach":"Sydney Cummings","url":"https://www.youtube.com/results?search_query=donkey+kick+glute+tutorial"},
+    {"id":"g06","nombre":"Cable Kickback","grupo":"Glúteos",
+     "descripcion":"En polea baja, lleva el pie hacia atrás y arriba contrayendo el glúteo. Mantén el core activo y evita arquear la espalda.",
+     "equipo":["maquina_cables"],"dificultad":"principiante",
+     "objetivo":["recomposicion","hipertrofia"],"lesiones_evitar":[],
+     "coach":"Stephanie Sanzo","url":"https://www.youtube.com/results?search_query=cable+kickback+glutes+tutorial"},
+    {"id":"g07","nombre":"Clamshell con banda","grupo":"Glúteos",
+     "descripcion":"Acostada de lado, rodillas dobladas, abre la pierna superior como almeja. Activa glúteo medio. Esencial para salud de cadera.",
+     "equipo":["ninguno","mat","banda"],"dificultad":"principiante",
+     "objetivo":["recomposicion","salud","rehabilitacion"],"lesiones_evitar":[],
+     "coach":"Heather Robertson","url":"https://www.youtube.com/results?search_query=clamshell+exercise+glute+med+tutorial"},
+
+    # ── CUÁDRICEPS / PIERNAS ─────────────────────────────────────────────────
+    {"id":"q01","nombre":"Sentadilla con barra","grupo":"Cuádriceps",
+     "descripcion":"Reina de los ejercicios. Barra en trapecios, pies a ancho de hombros, baja hasta paralelo manteniendo el pecho arriba y rodillas sobre pies.",
+     "equipo":["barra","rack"],"dificultad":"intermedio",
+     "objetivo":["recomposicion","hipertrofia","fuerza"],"lesiones_evitar":["Rodillas","Espalda baja (lumbar)"],
+     "coach":"Squat University","url":"https://www.youtube.com/@SquatUniversity"},
+    {"id":"q02","nombre":"Sentadilla goblet con mancuerna","grupo":"Cuádriceps",
+     "descripcion":"Sostén una mancuerna frente al pecho. Excelente para aprender la mecánica de la sentadilla. Mantén el torso erguido.",
+     "equipo":["mancuernas"],"dificultad":"principiante",
+     "objetivo":["recomposicion","salud"],"lesiones_evitar":["Rodillas"],
+     "coach":"Jeff Nippard","url":"https://www.youtube.com/results?search_query=goblet+squat+tutorial"},
+    {"id":"q03","nombre":"Sentadilla sumo","grupo":"Cuádriceps",
+     "descripcion":"Pies más separados que los hombros, pies apuntando afuera. Mayor activación de glúteos e isquiotibiales. Sostén una mancuerna o kettlebell.",
+     "equipo":["mancuernas","ninguno"],"dificultad":"principiante",
+     "objetivo":["recomposicion","hipertrofia"],"lesiones_evitar":[],
+     "coach":"Heather Robertson","url":"https://www.youtube.com/results?search_query=sumo+squat+tutorial"},
+    {"id":"q04","nombre":"Leg Press","grupo":"Cuádriceps",
+     "descripcion":"Máquina inclinada. Pies a ancho de caderas en la plataforma. No bloquees completamente las rodillas. Controla el regreso.",
+     "equipo":["maquina_leg_press"],"dificultad":"principiante",
+     "objetivo":["recomposicion","hipertrofia"],"lesiones_evitar":["Rodillas"],
+     "coach":"Jeremy Ethier","url":"https://www.youtube.com/results?search_query=leg+press+tutorial+form"},
+    {"id":"q05","nombre":"Estocada con mancuernas","grupo":"Cuádriceps",
+     "descripcion":"Paso largo al frente, baja la rodilla trasera casi al suelo. Alterna piernas. Excelente para equilibrio y fuerza unilateral.",
+     "equipo":["ninguno","mancuernas"],"dificultad":"principiante",
+     "objetivo":["recomposicion","hipertrofia"],"lesiones_evitar":["Rodillas"],
+     "coach":"Heather Robertson","url":"https://www.youtube.com/results?search_query=dumbbell+lunge+tutorial"},
+    {"id":"q06","nombre":"Step Up con mancuernas","grupo":"Cuádriceps",
+     "descripcion":"Sube a un banco o step con una pierna a la vez. Empuja con el talón para mayor activación glútea. Controla el descenso.",
+     "equipo":["banco","mancuernas","ninguno"],"dificultad":"principiante",
+     "objetivo":["recomposicion","salud"],"lesiones_evitar":["Rodillas"],
+     "coach":"Heather Robertson","url":"https://www.youtube.com/results?search_query=step+up+exercise+tutorial"},
+
+    # ── ISQUIOTIBIALES ────────────────────────────────────────────────────────
+    {"id":"i01","nombre":"Romanian Deadlift con barra","grupo":"Isquiotibiales",
+     "descripcion":"Piernas ligeramente dobladas, baja la barra por las espinillas manteniendo la espalda recta y el core activo. Siente el estiramiento en isquiotibiales.",
+     "equipo":["barra"],"dificultad":"intermedio",
+     "objetivo":["recomposicion","hipertrofia","fuerza"],"lesiones_evitar":["Espalda baja (lumbar)"],
+     "coach":"Jeff Nippard","url":"https://www.youtube.com/results?search_query=romanian+deadlift+tutorial+jeff+nippard"},
+    {"id":"i02","nombre":"Romanian Deadlift con mancuernas","grupo":"Isquiotibiales",
+     "descripcion":"Igual que con barra pero más accesible para casa. Mantén las mancuernas cerca del cuerpo durante todo el movimiento.",
+     "equipo":["mancuernas"],"dificultad":"principiante",
+     "objetivo":["recomposicion","hipertrofia"],"lesiones_evitar":["Espalda baja (lumbar)"],
+     "coach":"Jeff Nippard","url":"https://www.youtube.com/results?search_query=dumbbell+romanian+deadlift+tutorial"},
+    {"id":"i03","nombre":"Leg Curl en máquina","grupo":"Isquiotibiales",
+     "descripcion":"Tumbada boca abajo, lleva los talones hacia los glúteos contrayendo los isquiotibiales. Controla el regreso. Excelente aislamiento.",
+     "equipo":["maquina_leg_curl"],"dificultad":"principiante",
+     "objetivo":["recomposicion","hipertrofia"],"lesiones_evitar":[],
+     "coach":"Jeremy Ethier","url":"https://www.youtube.com/results?search_query=lying+leg+curl+machine+tutorial"},
+    {"id":"i04","nombre":"Good Morning con mancuernas","grupo":"Isquiotibiales",
+     "descripcion":"Mancuernas en hombros, bisagra de cadera hacia adelante manteniendo espalda recta. Activa isquiotibiales y espalda baja.",
+     "equipo":["mancuernas"],"dificultad":"intermedio",
+     "objetivo":["recomposicion","fuerza"],"lesiones_evitar":["Espalda baja (lumbar)"],
+     "coach":"Alan Thrall","url":"https://www.youtube.com/results?search_query=good+morning+exercise+tutorial"},
+
+    # ── ESPALDA ───────────────────────────────────────────────────────────────
+    {"id":"e01","nombre":"Jalón al pecho (Lat Pulldown)","grupo":"Espalda",
+     "descripcion":"Agarra la barra un poco más ancho que los hombros, jala hacia el pecho arqueando ligeramente el torso. Contrae los dorsales en la cima.",
+     "equipo":["maquina_polea"],"dificultad":"principiante",
+     "objetivo":["recomposicion","hipertrofia"],"lesiones_evitar":["Espalda alta / hombros"],
+     "coach":"Jeff Nippard","url":"https://www.youtube.com/results?search_query=lat+pulldown+tutorial+jeff+nippard"},
+    {"id":"e02","nombre":"Remo con mancuerna (un brazo)","grupo":"Espalda",
+     "descripcion":"Rodilla y mano en el banco, tira la mancuerna hacia la cadera manteniendo el codo cerca del cuerpo. Excelente para dorsales y romboides.",
+     "equipo":["mancuernas","banco"],"dificultad":"principiante",
+     "objetivo":["recomposicion","hipertrofia"],"lesiones_evitar":[],
+     "coach":"Jeff Nippard","url":"https://www.youtube.com/results?search_query=one+arm+dumbbell+row+tutorial"},
+    {"id":"e03","nombre":"Remo con barra","grupo":"Espalda",
+     "descripcion":"Inclinado a 45°, tira la barra hacia el abdomen bajo. Uno de los mejores ejercicios para volumen de espalda. Mantén la espalda recta.",
+     "equipo":["barra"],"dificultad":"intermedio",
+     "objetivo":["recomposicion","hipertrofia","fuerza"],"lesiones_evitar":["Espalda baja (lumbar)"],
+     "coach":"Jeff Nippard","url":"https://www.youtube.com/results?search_query=barbell+row+tutorial+jeff+nippard"},
+    {"id":"e04","nombre":"Face Pull con banda","grupo":"Espalda",
+     "descripcion":"Con banda elástica anclada, tira hacia la cara separando los codos. Fortalece manguito rotador y romboides. Esencial para postura.",
+     "equipo":["banda","maquina_cables"],"dificultad":"principiante",
+     "objetivo":["recomposicion","salud","rehabilitacion"],"lesiones_evitar":[],
+     "coach":"Jeff Nippard","url":"https://www.youtube.com/results?search_query=face+pull+band+tutorial+jeff+nippard"},
+    {"id":"e05","nombre":"Superman","grupo":"Espalda",
+     "descripcion":"Boca abajo, eleva simultáneamente brazos y piernas del suelo. Fortalece la cadena posterior. Sin equipo, ideal para activación.",
+     "equipo":["ninguno","mat"],"dificultad":"principiante",
+     "objetivo":["recomposicion","salud"],"lesiones_evitar":["Espalda baja (lumbar)"],
+     "coach":"Heather Robertson","url":"https://www.youtube.com/results?search_query=superman+exercise+back+tutorial"},
+    {"id":"e06","nombre":"Dominadas asistidas","grupo":"Espalda",
+     "descripcion":"Con banda elástica de apoyo o máquina asistida. El mejor ejercicio para la espalda. Progresa a dominadas sin asistencia.",
+     "equipo":["barra_dominadas","banda","maquina_asistida"],"dificultad":"intermedio",
+     "objetivo":["recomposicion","hipertrofia","fuerza"],"lesiones_evitar":["Espalda alta / hombros"],
+     "coach":"Jeff Nippard","url":"https://www.youtube.com/results?search_query=pull+up+tutorial+progression"},
+
+    # ── PECHO ─────────────────────────────────────────────────────────────────
+    {"id":"p01","nombre":"Press de pecho con mancuernas","grupo":"Pecho",
+     "descripcion":"Acostada en banco, mancuernas a la altura del pecho, empuja hacia arriba sin bloquear codos. Controla el descenso.",
+     "equipo":["mancuernas","banco"],"dificultad":"principiante",
+     "objetivo":["recomposicion","hipertrofia"],"lesiones_evitar":["Espalda alta / hombros"],
+     "coach":"Jeremy Ethier","url":"https://www.youtube.com/results?search_query=dumbbell+chest+press+tutorial"},
+    {"id":"p02","nombre":"Push-up (flexión de pecho)","grupo":"Pecho",
+     "descripcion":"El clásico sin equipo. Manos a ancho de hombros, cuerpo en línea recta. Modifica con rodillas si es necesario. Progresa a versión declinada.",
+     "equipo":["ninguno","mat"],"dificultad":"principiante",
+     "objetivo":["recomposicion","fuerza","salud"],"lesiones_evitar":["Muñecas / codos"],
+     "coach":"Athlean-X","url":"https://www.youtube.com/results?search_query=perfect+push+up+form+athlean+x"},
+    {"id":"p03","nombre":"Fly con mancuernas","grupo":"Pecho",
+     "descripcion":"Acostada en banco, abre los brazos hacia los lados con ligera flexión de codo, junta las mancuernas arriba. Enfatiza el estiramiento del pecho.",
+     "equipo":["mancuernas","banco"],"dificultad":"intermedio",
+     "objetivo":["recomposicion","hipertrofia"],"lesiones_evitar":["Espalda alta / hombros"],
+     "coach":"Jeff Nippard","url":"https://www.youtube.com/results?search_query=dumbbell+fly+tutorial+jeff+nippard"},
+
+    # ── HOMBROS ───────────────────────────────────────────────────────────────
+    {"id":"h01","nombre":"Press de hombros con mancuernas","grupo":"Hombros",
+     "descripcion":"Sentada o de pie, mancuernas a la altura de los hombros, empuja hacia arriba. No bloquees codos arriba. Activa todo el deltoides.",
+     "equipo":["mancuernas"],"dificultad":"principiante",
+     "objetivo":["recomposicion","hipertrofia"],"lesiones_evitar":["Espalda alta / hombros","Cuello / cervical"],
+     "coach":"Jeff Nippard","url":"https://www.youtube.com/results?search_query=dumbbell+shoulder+press+tutorial"},
+    {"id":"h02","nombre":"Elevaciones laterales","grupo":"Hombros",
+     "descripcion":"Mancuernas a los lados, eleva hasta la altura de los hombros con codos ligeramente doblados. Fundamental para hombros anchos. Pesos ligeros.",
+     "equipo":["mancuernas"],"dificultad":"principiante",
+     "objetivo":["recomposicion","hipertrofia"],"lesiones_evitar":["Espalda alta / hombros"],
+     "coach":"Jeff Nippard","url":"https://www.youtube.com/results?search_query=lateral+raise+perfect+form+jeff+nippard"},
+    {"id":"h03","nombre":"Elevaciones frontales","grupo":"Hombros",
+     "descripcion":"Mancuerna en cada mano, eleva al frente hasta la altura de los hombros alternando o juntas. Activa el deltoides anterior.",
+     "equipo":["mancuernas"],"dificultad":"principiante",
+     "objetivo":["recomposicion","hipertrofia"],"lesiones_evitar":["Espalda alta / hombros"],
+     "coach":"Jeremy Ethier","url":"https://www.youtube.com/results?search_query=front+raise+dumbbell+tutorial"},
+
+    # ── BÍCEPS ────────────────────────────────────────────────────────────────
+    {"id":"b01","nombre":"Curl con mancuernas","grupo":"Bíceps",
+     "descripcion":"De pie, curl alterno o simultáneo. Codos fijos a los lados, supina la muñeca al subir. Controla el regreso.",
+     "equipo":["mancuernas"],"dificultad":"principiante",
+     "objetivo":["recomposicion","hipertrofia"],"lesiones_evitar":["Muñecas / codos"],
+     "coach":"Jeff Nippard","url":"https://www.youtube.com/results?search_query=dumbbell+curl+perfect+form+jeff+nippard"},
+    {"id":"b02","nombre":"Curl martillo","grupo":"Bíceps",
+     "descripcion":"Igual que el curl normal pero con agarre neutro (pulgares arriba). Activa también el braquial y braquiorradial.",
+     "equipo":["mancuernas"],"dificultad":"principiante",
+     "objetivo":["recomposicion","hipertrofia"],"lesiones_evitar":["Muñecas / codos"],
+     "coach":"Jeremy Ethier","url":"https://www.youtube.com/results?search_query=hammer+curl+tutorial"},
+    {"id":"b03","nombre":"Curl con barra","grupo":"Bíceps",
+     "descripcion":"Agarre supinado, barra de pie. Mayor carga posible para bíceps. Evita usar el cuerpo para impulsar.",
+     "equipo":["barra"],"dificultad":"principiante",
+     "objetivo":["recomposicion","hipertrofia","fuerza"],"lesiones_evitar":["Muñecas / codos"],
+     "coach":"Jeff Nippard","url":"https://www.youtube.com/results?search_query=barbell+curl+tutorial"},
+
+    # ── TRÍCEPS ───────────────────────────────────────────────────────────────
+    {"id":"t01","nombre":"Extensión de tríceps sobre cabeza","grupo":"Tríceps",
+     "descripcion":"Sentada, mancuerna con ambas manos sobre la cabeza, baja detrás de la nuca y sube. Excelente para el largo del tríceps.",
+     "equipo":["mancuernas"],"dificultad":"principiante",
+     "objetivo":["recomposicion","hipertrofia"],"lesiones_evitar":["Muñecas / codos","Cuello / cervical"],
+     "coach":"Jeff Nippard","url":"https://www.youtube.com/results?search_query=overhead+tricep+extension+dumbbell+tutorial"},
+    {"id":"t02","nombre":"Fondos en banco (Dips)","grupo":"Tríceps",
+     "descripcion":"Manos en el borde del banco, pies al frente. Baja el cuerpo doblando codos a 90°. Añade peso en el regazo para progresar.",
+     "equipo":["banco"],"dificultad":"principiante",
+     "objetivo":["recomposicion","hipertrofia"],"lesiones_evitar":["Muñecas / codos","Espalda alta / hombros"],
+     "coach":"Heather Robertson","url":"https://www.youtube.com/results?search_query=bench+dips+tricep+tutorial"},
+    {"id":"t03","nombre":"Kickback de tríceps","grupo":"Tríceps",
+     "descripcion":"Inclinada con una mano en el banco, codo fijo a 90°, extiende el brazo atrás hasta completa extensión. Aislamiento puro.",
+     "equipo":["mancuernas","banco"],"dificultad":"principiante",
+     "objetivo":["recomposicion","hipertrofia"],"lesiones_evitar":["Muñecas / codos"],
+     "coach":"Heather Robertson","url":"https://www.youtube.com/results?search_query=tricep+kickback+tutorial"},
+
+    # ── CORE ─────────────────────────────────────────────────────────────────
+    {"id":"c01","nombre":"Plancha (Plank)","grupo":"Core",
+     "descripcion":"Apoya antebrazos y puntillas. Cuerpo en línea recta, core activo. No dejes caer las caderas. Progresa en tiempo.",
+     "equipo":["ninguno","mat"],"dificultad":"principiante",
+     "objetivo":["recomposicion","salud","fuerza"],"lesiones_evitar":["Espalda baja (lumbar)","Muñecas / codos"],
+     "coach":"Squat University","url":"https://www.youtube.com/results?search_query=plank+form+core+tutorial"},
+    {"id":"c02","nombre":"Dead Bug","grupo":"Core",
+     "descripcion":"Boca arriba, brazos al techo y rodillas a 90°. Baja el brazo derecho y pierna izquierda simultáneamente sin despegar la espalda. Alterna.",
+     "equipo":["ninguno","mat"],"dificultad":"principiante",
+     "objetivo":["recomposicion","salud","rehabilitacion"],"lesiones_evitar":["Espalda baja (lumbar)"],
+     "coach":"Squat University","url":"https://www.youtube.com/results?search_query=dead+bug+exercise+tutorial"},
+    {"id":"c03","nombre":"Bird Dog","grupo":"Core",
+     "descripcion":"En cuadrupedia, extiende simultáneamente el brazo y pierna opuestos. Mantén la cadera nivelada. Esencial para estabilidad lumbar.",
+     "equipo":["ninguno","mat"],"dificultad":"principiante",
+     "objetivo":["recomposicion","salud","rehabilitacion"],"lesiones_evitar":[],
+     "coach":"Squat University","url":"https://www.youtube.com/results?search_query=bird+dog+exercise+tutorial"},
+    {"id":"c04","nombre":"Mountain Climber","grupo":"Core",
+     "descripcion":"En posición de plancha alta, alterna rodillas hacia el pecho rápidamente. Cardio + core en uno.",
+     "equipo":["ninguno","mat"],"dificultad":"intermedio",
+     "objetivo":["recomposicion","salud"],"lesiones_evitar":["Muñecas / codos","Espalda baja (lumbar)"],
+     "coach":"Sydney Cummings","url":"https://www.youtube.com/results?search_query=mountain+climber+tutorial"},
+    {"id":"c05","nombre":"Crunch abdominal","grupo":"Core",
+     "descripcion":"Boca arriba, rodillas dobladas, sube el tórax hacia las rodillas sin jalar el cuello. Contrae el abdomen en la cima.",
+     "equipo":["ninguno","mat"],"dificultad":"principiante",
+     "objetivo":["recomposicion","salud"],"lesiones_evitar":["Cuello / cervical"],
+     "coach":"Heather Robertson","url":"https://www.youtube.com/results?search_query=crunch+ab+exercise+proper+form"},
+
+    # ── CARDIO ────────────────────────────────────────────────────────────────
+    {"id":"ca01","nombre":"Bicicleta estática — Steady State","grupo":"Cardio",
+     "descripcion":"Pedalea a intensidad moderada (RPE 5-6) durante 20-30 min. Zona 2: puedes hablar con esfuerzo. Ideal para recuperación activa y quema de grasa.",
+     "equipo":["bicicleta"],"dificultad":"principiante",
+     "objetivo":["recomposicion","salud","perdida_grasa"],"lesiones_evitar":[],
+     "coach":"","url":"https://www.youtube.com/results?search_query=zone+2+cardio+benefits"},
+    {"id":"ca02","nombre":"Bicicleta estática — HIIT","grupo":"Cardio",
+     "descripcion":"Alterna 30 seg máximo esfuerzo + 90 seg recuperación. 8-10 rondas. Altamente efectivo para composición corporal (Schoenfeld & Dawes).",
+     "equipo":["bicicleta"],"dificultad":"intermedio",
+     "objetivo":["recomposicion","perdida_grasa"],"lesiones_evitar":["Rodillas"],
+     "coach":"","url":"https://www.youtube.com/results?search_query=hiit+stationary+bike+workout"},
+    {"id":"ca03","nombre":"Jump Squat","grupo":"Cardio",
+     "descripcion":"Sentadilla y explota hacia arriba saltando. Aterriza suavemente doblando rodillas. Combina potencia, cardio y piernas.",
+     "equipo":["ninguno"],"dificultad":"intermedio",
+     "objetivo":["recomposicion","salud"],"lesiones_evitar":["Rodillas","Tobillos / pies"],
+     "coach":"Sydney Cummings","url":"https://www.youtube.com/results?search_query=jump+squat+tutorial"},
+    {"id":"ca04","nombre":"Burpee","grupo":"Cardio",
+     "descripcion":"El ejercicio total body más efectivo para cardio en casa. Modifica omitiendo el salto si es necesario.",
+     "equipo":["ninguno","mat"],"dificultad":"intermedio",
+     "objetivo":["recomposicion","perdida_grasa"],"lesiones_evitar":["Muñecas / codos","Rodillas"],
+     "coach":"Sydney Cummings","url":"https://www.youtube.com/results?search_query=burpee+proper+form+tutorial"},
+]
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# MAPEO DE EQUIPO
+# ══════════════════════════════════════════════════════════════════════════════
+EQUIPO_DISPONIBLE = {
+    "Solo peso corporal — sin equipo":
+        ["ninguno","mat"],
+    "Equipo básico — mancuernas y/o bandas elásticas":
+        ["ninguno","mat","mancuernas","banda"],
+    "Equipo intermedio — mancuernas, barra, banco":
+        ["ninguno","mat","mancuernas","banda","barra","banco","bicicleta"],
+    "Acceso a gimnasio completo":
+        ["ninguno","mat","mancuernas","banda","barra","banco","bicicleta",
+         "rack","maquina_cables","maquina_polea","maquina_leg_press",
+         "maquina_leg_curl","maquina_asistida","barra_dominadas"],
+}
+
+# Añadir barra_ligera como equivalente a barra para equipo básico
+EQUIPO_DISPONIBLE["Equipo básico — mancuernas y/o bandas elásticas"].append("barra")
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# ESTRUCTURAS DE PROGRAMA
+# ══════════════════════════════════════════════════════════════════════════════
+ESTRUCTURAS = {
+    2: [
+        {"nombre":"Día 1 — Cuerpo completo A",
+         "grupos":["Glúteos","Cuádriceps","Espalda","Core"],"color":"#dbeafe"},
+        {"nombre":"Día 2 — Cuerpo completo B",
+         "grupos":["Glúteos","Isquiotibiales","Hombros","Pecho","Core"],"color":"#dcfce7"},
+    ],
+    3: [
+        {"nombre":"Día 1 — Inferior (Glúteos & Piernas)",
+         "grupos":["Glúteos","Cuádriceps","Isquiotibiales","Core"],"color":"#fce7f3"},
+        {"nombre":"Día 2 — Superior (Empuje & Jale)",
+         "grupos":["Espalda","Pecho","Hombros","Bíceps","Tríceps"],"color":"#dbeafe"},
+        {"nombre":"Día 3 — Glúteos & Cardio",
+         "grupos":["Glúteos","Isquiotibiales","Core","Cardio"],"color":"#dcfce7"},
+    ],
+    4: [
+        {"nombre":"Día 1 — Superior Empuje",
+         "grupos":["Pecho","Hombros","Tríceps","Core"],"color":"#dbeafe"},
+        {"nombre":"Día 2 — Inferior A (Cuádriceps & Glúteos)",
+         "grupos":["Cuádriceps","Glúteos","Core"],"color":"#fce7f3"},
+        {"nombre":"Día 3 — Superior Jale",
+         "grupos":["Espalda","Bíceps","Hombros","Core"],"color":"#dcfce7"},
+        {"nombre":"Día 4 — Inferior B (Glúteos & Isquiotibiales)",
+         "grupos":["Glúteos","Isquiotibiales","Cardio"],"color":"#f3e8ff"},
+    ],
+    5: [
+        {"nombre":"Día 1 — Empuje A",
+         "grupos":["Pecho","Hombros","Tríceps"],"color":"#dbeafe"},
+        {"nombre":"Día 2 — Jale A",
+         "grupos":["Espalda","Bíceps","Core"],"color":"#dcfce7"},
+        {"nombre":"Día 3 — Piernas & Glúteos A",
+         "grupos":["Glúteos","Cuádriceps","Core"],"color":"#fce7f3"},
+        {"nombre":"Día 4 — Empuje B + Core",
+         "grupos":["Hombros","Pecho","Tríceps","Core"],"color":"#dbeafe"},
+        {"nombre":"Día 5 — Piernas & Glúteos B",
+         "grupos":["Glúteos","Isquiotibiales","Cardio"],"color":"#f3e8ff"},
+    ],
+    6: [
+        {"nombre":"Día 1 — Empuje A",
+         "grupos":["Pecho","Hombros","Tríceps"],"color":"#dbeafe"},
+        {"nombre":"Día 2 — Jale A",
+         "grupos":["Espalda","Bíceps","Core"],"color":"#dcfce7"},
+        {"nombre":"Día 3 — Piernas A",
+         "grupos":["Glúteos","Cuádriceps","Core"],"color":"#fce7f3"},
+        {"nombre":"Día 4 — Empuje B",
+         "grupos":["Hombros","Pecho","Tríceps"],"color":"#dbeafe"},
+        {"nombre":"Día 5 — Jale B",
+         "grupos":["Espalda","Bíceps","Hombros"],"color":"#dcfce7"},
+        {"nombre":"Día 6 — Piernas B + Cardio",
+         "grupos":["Glúteos","Isquiotibiales","Cardio"],"color":"#f3e8ff"},
+    ],
+}
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# HELPERS
+# ══════════════════════════════════════════════════════════════════════════════
+def get_equipo_lista(equipo_str: str) -> list:
+    for k, v in EQUIPO_DISPONIBLE.items():
+        if k == equipo_str:
+            return v
+    return EQUIPO_DISPONIBLE["Solo peso corporal — sin equipo"]
+
+
+def get_rep_scheme(objetivo: str, dificultad: str = "intermedio") -> str:
+    obj = objetivo.lower()
+    if "fuerza" in obj:
+        return "4-5 × 4-6"
+    elif "hipertrofia" in obj or "músculo" in obj:
+        return "4 × 8-10"
+    elif "grasa" in obj:
+        return "3 × 12-15"
+    else:  # recomposicion, salud
+        return "3-4 × 10-12"
+
+
+def get_descanso(objetivo: str) -> str:
+    obj = objetivo.lower()
+    if "fuerza" in obj:           return "2-3 min"
+    elif "hipertrofia" in obj:    return "60-90 seg"
+    elif "grasa" in obj:          return "30-45 seg"
+    else:                          return "60-90 seg"
+
+
+def filtrar_ejercicios(grupo: str, equipo_lista: list, lesiones_lista: list,
+                        max_ej: int = 3) -> list:
+    lesiones = [l.strip() for l in lesiones_lista if l and l != "Ninguna"]
+    candidatos = [
+        e for e in EJERCICIOS_BASE
+        if e["grupo"] == grupo
+        and any(eq in equipo_lista for eq in e["equipo"])
+        and not any(l in e.get("lesiones_evitar", []) for l in lesiones)
+    ]
+    return candidatos[:max_ej]
+
+
+def get_fase_actual(uid: str) -> dict | None:
+    """Obtiene la fase del ciclo actual del usuario."""
+    try:
+        from datetime import timedelta
+        df = leer_df_usuario("ciclo", uid)
+        if df.empty:
+            return None
+        df["fecha_inicio"] = pd.to_datetime(df["fecha_inicio"], errors="coerce").dt.date
+        df = df.dropna(subset=["fecha_inicio"]).sort_values("fecha_inicio")
+        if df.empty:
+            return None
+
+        ultimo = df.iloc[-1]["fecha_inicio"]
+        # Calcular promedio de ciclo
+        if len(df) >= 2:
+            diffs = [(df.iloc[i]["fecha_inicio"] - df.iloc[i-1]["fecha_inicio"]).days
+                     for i in range(1, len(df))]
+            dur = round(sum(diffs) / len(diffs))
+        else:
+            dur = 28
+
+        dias = (date.today() - ultimo).days
+        ciclos = dias // dur
+        inicio_actual = ultimo + timedelta(days=dur * ciclos)
+        dia_ciclo = (date.today() - inicio_actual).days + 1
+
+        if 1 <= dia_ciclo <= 5:
+            return {"nombre":"Menstrual","emoji":"🔴","dia":dia_ciclo,
+                    "nota":"Baja la intensidad si hay molestias. Cardio suave y movilidad.",
+                    "intensidad":0.7}
+        elif 6 <= dia_ciclo <= 13:
+            return {"nombre":"Folicular","emoji":"🟢","dia":dia_ciclo,
+                    "nota":"¡Tu mejor semana! Ideal para cargas máximas y aprender movimientos nuevos.",
+                    "intensidad":1.0}
+        elif 14 <= dia_ciclo <= 16:
+            return {"nombre":"Ovulatoria","emoji":"🟡","dia":dia_ciclo,
+                    "nota":"Pico de rendimiento. Intenta tus récords personales hoy.",
+                    "intensidad":1.1}
+        else:
+            return {"nombre":"Lútea","emoji":"🟣","dia":dia_ciclo,
+                    "nota":"Entrena moderado. Reduce volumen en la última semana antes del período.",
+                    "intensidad":0.85}
+    except Exception:
+        return None
+
+
+def badge(texto: str, color: str) -> str:
+    return f'<span style="background:{color};color:#1e293b;font-size:11px;padding:2px 8px;border-radius:10px;font-weight:500;">{texto}</span>'
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# MÓDULO PRINCIPAL
+# ══════════════════════════════════════════════════════════════════════════════
 def mostrar():
     estado.cargar_perfil()
-    st.title("📈 Progreso")
-    st.info("🚧 Próximamente — gráficas de evolución de peso, IMC y medidas en el tiempo.")
+    st.title("🏋️ Rutinas & Programas")
+
+    uid     = estado.get("user_id",       "")
+    obj     = estado.get("eval_objetivo", "")
+    nivel   = estado.get("eval_nivel",    "")
+    dias    = estado.get("eval_dias",     3)
+    equipo  = estado.get("eval_equipo",   "")
+    lesiones_str = estado.get("eval_lesiones", "")
+    genero  = estado.get("genero",        "Mujer")
+
+    lesiones = [l.strip() for l in lesiones_str.split(",") if l.strip() and l.strip() != "Ninguna"]
+    equipo_lista = get_equipo_lista(equipo)
+    rep_scheme = get_rep_scheme(obj)
+    descanso   = get_descanso(obj)
+    fase       = get_fase_actual(uid) if genero == "Mujer" else None
+
+    # ── Sin evaluación ────────────────────────────────────────────────────────
+    if not obj:
+        st.warning("⚠️ Completa la **🧬 Evaluación Inicial** primero para obtener tu programa personalizado.")
+        return
+
+    tab1, tab2, tab3 = st.tabs(["📋 Mi Programa", "💪 Ejercicios", "👩‍💻 Coaches"])
+
+    # ══════════════════════════════════════════════════════════════════════════
+    # TAB 1 — MI PROGRAMA
+    # ══════════════════════════════════════════════════════════════════════════
+    with tab1:
+        # Perfil resumen
+        c1, c2, c3, c4 = st.columns(4)
+        c1.metric("Objetivo", obj.split("(")[0].strip()[:25])
+        c2.metric("Nivel", nivel.split("—")[0].strip()[:15] if "—" in nivel else nivel[:15])
+        c3.metric("Días/semana", f"{dias} días")
+        c4.metric("Equipo", equipo.split("—")[0].strip()[:20])
+
+        # Nota de fase del ciclo
+        if fase:
+            color_fase = {"Menstrual":"#fee2e2","Folicular":"#dcfce7",
+                          "Ovulatoria":"#fef9c3","Lútea":"#f3e8ff"}.get(fase["nombre"],"#f1f5f9")
+            st.markdown(f"""
+            <div style="background:{color_fase};border-radius:10px;padding:12px 16px;margin:12px 0;">
+                <strong>{fase['emoji']} Fase {fase['nombre']} — Día {fase['dia']}</strong><br>
+                <span style="font-size:14px;">{fase['nota']}</span>
+            </div>""", unsafe_allow_html=True)
+
+        st.divider()
+
+        # Obtener estructura según días disponibles
+        dias_key = min(dias, 6)
+        dias_key = max(dias_key, 2)
+        estructura = ESTRUCTURAS.get(dias_key, ESTRUCTURAS[3])
+
+        st.subheader(f"📅 Programa semanal — {dias} días")
+        st.caption(f"Series × Reps objetivo: **{rep_scheme}** · Descanso entre series: **{descanso}**")
+
+        for i, dia_info in enumerate(estructura):
+            with st.expander(f"{dia_info['nombre']}", expanded=(i == 0)):
+                st.markdown(f"**Grupos musculares:** {', '.join(dia_info['grupos'])}")
+                if fase:
+                    intensidad = fase["intensidad"]
+                    if intensidad < 0.8:
+                        st.caption("💜 Reduce el peso un 20-30% hoy según tu fase del ciclo.")
+                    elif intensidad > 1.0:
+                        st.caption("⚡ ¡Hoy puedes dar el máximo! Excelente día para nuevos récords.")
+
+                st.divider()
+
+                ejercicios_dia = []
+                for grupo in dia_info["grupos"]:
+                    ejs = filtrar_ejercicios(grupo, equipo_lista, lesiones,
+                                              max_ej=2 if len(dia_info["grupos"]) > 3 else 3)
+                    ejercicios_dia.extend(ejs)
+
+                if not ejercicios_dia:
+                    st.warning("No hay ejercicios disponibles para tu equipo en este día.")
+                    continue
+
+                for ej in ejercicios_dia:
+                    col_info, col_link = st.columns([5, 1])
+                    with col_info:
+                        dif_color = {"principiante":"#dcfce7",
+                                     "intermedio":"#fef9c3",
+                                     "avanzado":"#fee2e2"}.get(ej["dificultad"],"#f1f5f9")
+                        st.markdown(
+                            f"**{ej['nombre']}** &nbsp;"
+                            f"{badge(ej['grupo'], '#e0e7ff')} &nbsp;"
+                            f"{badge(ej['dificultad'], dif_color)}",
+                            unsafe_allow_html=True)
+                        st.caption(f"📊 {rep_scheme} · ⏱ {descanso} descanso")
+                        st.caption(ej["descripcion"][:120] + "..." if len(ej["descripcion"]) > 120 else ej["descripcion"])
+                    with col_link:
+                        if ej.get("url"):
+                            st.link_button("▶ Ver", ej["url"], use_container_width=True)
+                    st.markdown("---")
+
+        # Registro de sesión
+        st.divider()
+        with st.expander("✍️ Registrar sesión de hoy"):
+            col_r1, col_r2 = st.columns(2)
+            with col_r1:
+                dia_sel  = st.selectbox("Día entrenado", [d["nombre"] for d in estructura])
+                ej_sel   = st.text_input("Ejercicio principal")
+                series_r = st.number_input("Series", 1, 10, 3)
+            with col_r2:
+                reps_r   = st.text_input("Reps (ej: 10, 10, 8)")
+                peso_r   = st.number_input("Peso (lbs)", 0.0, 500.0, 0.0, 2.5)
+                notas_r  = st.text_input("Notas")
+            if st.button("💾 Guardar sesión", type="primary"):
+                try:
+                    guardar_fila_usuario("rutinas_sesiones", [
+                        str(date.today()), dia_sel, ej_sel,
+                        series_r, reps_r, peso_r, notas_r
+                    ], uid)
+                    st.success("✅ Sesión registrada.")
+                except Exception as e:
+                    st.error(f"Error: {e}")
+
+    # ══════════════════════════════════════════════════════════════════════════
+    # TAB 2 — EJERCICIOS
+    # ══════════════════════════════════════════════════════════════════════════
+    with tab2:
+        st.subheader("💪 Biblioteca de ejercicios")
+
+        grupos_disponibles = sorted(set(e["grupo"] for e in EJERCICIOS_BASE))
+        col_f1, col_f2, col_f3 = st.columns(3)
+        with col_f1:
+            grupo_filtro = st.selectbox("Grupo muscular", ["Todos"] + grupos_disponibles)
+        with col_f2:
+            dif_filtro = st.selectbox("Dificultad", ["Todos","principiante","intermedio","avanzado"])
+        with col_f3:
+            solo_mi_equipo = st.checkbox("Solo mi equipo", value=True)
+
+        ejercicios_filtrados = EJERCICIOS_BASE.copy()
+        if grupo_filtro != "Todos":
+            ejercicios_filtrados = [e for e in ejercicios_filtrados if e["grupo"] == grupo_filtro]
+        if dif_filtro != "Todos":
+            ejercicios_filtrados = [e for e in ejercicios_filtrados if e["dificultad"] == dif_filtro]
+        if solo_mi_equipo and equipo_lista:
+            ejercicios_filtrados = [e for e in ejercicios_filtrados
+                                     if any(eq in equipo_lista for eq in e["equipo"])]
+
+        st.caption(f"{len(ejercicios_filtrados)} ejercicio(s) encontrado(s)")
+        st.divider()
+
+        for ej in ejercicios_filtrados:
+            with st.expander(f"**{ej['nombre']}** — {ej['grupo']}"):
+                col_d, col_v = st.columns([4, 1])
+                with col_d:
+                    dif_color = {"principiante":"#dcfce7","intermedio":"#fef9c3","avanzado":"#fee2e2"}.get(ej["dificultad"],"#f1f5f9")
+                    st.markdown(
+                        f"{badge(ej['grupo'],'#e0e7ff')} &nbsp;"
+                        f"{badge(ej['dificultad'], dif_color)} &nbsp;"
+                        f"{badge(', '.join(ej['equipo'][:2]),'#f1f5f9')}",
+                        unsafe_allow_html=True)
+                    st.markdown(f"**Técnica:** {ej['descripcion']}")
+                    if ej.get("coach"):
+                        st.caption(f"👩‍💻 Coach recomendado: {ej['coach']}")
+                    if lesiones and any(l in ej.get("lesiones_evitar", []) for l in lesiones):
+                        st.warning("⚠️ Este ejercicio puede agravar tus lesiones reportadas.")
+                with col_v:
+                    if ej.get("url"):
+                        st.link_button("▶ Ver tutorial", ej["url"], use_container_width=True)
+
+    # ══════════════════════════════════════════════════════════════════════════
+    # TAB 3 — COACHES
+    # ══════════════════════════════════════════════════════════════════════════
+    with tab3:
+        st.subheader("👩‍💻 Coaches recomendados")
+        obj_limpio = obj.lower()
+        areas_recomendadas = coaches_por_objetivo(obj_limpio)
+
+        if not areas_recomendadas:
+            areas_recomendadas = list(COACHES.keys())
+
+        for area_key in areas_recomendadas:
+            area = COACHES.get(area_key)
+            if not area:
+                continue
+            st.markdown(f"### {area['emoji']} {area['nombre_area']}")
+            for coach in area["coaches"]:
+                with st.container():
+                    col_c, col_l = st.columns([5, 1])
+                    with col_c:
+                        st.markdown(f"**{coach['nombre']}** &nbsp; {badge(coach['idioma'],'#f1f5f9')} &nbsp; {badge(coach['highlight'],'#e0e7ff')}",
+                                    unsafe_allow_html=True)
+                        st.caption(coach["descripcion"])
+                        niv_str = " · ".join(coach["nivel"])
+                        st.caption(f"Nivel: {niv_str}")
+                    with col_l:
+                        st.link_button("Canal ▶", coach["canal"], use_container_width=True)
+                    st.markdown("---")
+            st.divider()
