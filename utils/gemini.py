@@ -6,7 +6,7 @@ Documentación: https://aistudio.google.com
 import requests
 import streamlit as st
 
-GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent"
+GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent"
 
 
 def get_api_key() -> str | None:
