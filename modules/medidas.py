@@ -383,92 +383,79 @@ def mostrar():
                 st.error(f"Error al guardar: {e}")
                 st.exception(e)
 
-    # ── Historial ─────────────────────────────────────────────────────────
+
+    # ── Historial ─────────────────────────────────────────────────────────────
     st.divider()
     st.subheader("Registros")
+    df = None
     try:
         uid = estado.get("user_id", "")
-        df = leer_df_usuario("medidas", uid)
+        df  = leer_df_usuario("medidas", uid)
         if not df.empty:
             cols = [c for c in df.columns if not c.startswith("_") and c != "user_id"]
             st.dataframe(df[cols].iloc[::-1].reset_index(drop=True),
                          use_container_width=True, hide_index=True)
             st.divider()
             seccion_eliminar("medidas", df, "registros de medidas")
-
-    # ── Editar registro ────────────────────────────────────────────────────
-    st.divider()
-    with st.expander("✏️ Editar un registro existente"):
-        if df.empty:
-            st.info("No hay registros para editar.")
-        else:
-            fechas = df["fecha"].astype(str).tolist()
-            fecha_sel = st.selectbox("Selecciona la fecha del registro a editar",
-                                      fechas, key="edit_fecha")
-            fila_e = df[df["fecha"].astype(str) == fecha_sel].iloc[0]
-            fn_s   = int(fila_e["_fila_sheets"])
-
-            st.caption(f"Editando registro del {fecha_sel}")
-            e1, e2 = st.columns(2)
-            with e1:
-                eg = st.radio("Género", ["Mujer","Hombre"],
-                               index=0 if str(fila_e.get("genero","Mujer")) == "Mujer" else 1,
-                               key="eg", horizontal=True)
-                ep = st.number_input("Peso (lbs)", 66.0, 440.0,
-                                      float(fila_e.get("peso_lbs") or 132), 0.5,
-                                      key="ep", format="%.1f")
-                ea = st.number_input("Altura (cm)", 100.0, 220.0,
-                                      float(fila_e.get("altura_cm") or 165), 0.5,
-                                      key="ea", format="%.1f")
-                eh = st.number_input("Hombros (cm)", 50.0, 200.0,
-                                      float(fila_e.get("hombros_cm") or 100), 0.5,
-                                      key="eh", format="%.1f")
-                epc = st.number_input("Pecho/Busto (cm)", 50.0, 200.0,
-                                       float(fila_e.get("pecho_cm") or 90), 0.5,
-                                       key="epc", format="%.1f")
-            with e2:
-                ec = st.number_input("Cintura (cm)", 40.0, 200.0,
-                                      float(fila_e.get("cintura_cm") or 75), 0.5,
-                                      key="ec", format="%.1f")
-                eca = st.number_input("Cadera (cm)", 50.0, 200.0,
-                                       float(fila_e.get("cadera_cm") or 95), 0.5,
-                                       key="eca", format="%.1f")
-                emd = st.number_input("Muslo derecho (cm)", 20.0, 100.0,
-                                       float(fila_e.get("muslo_der_cm") or 55), 0.5,
-                                       key="emd", format="%.1f")
-                emi = st.number_input("Muslo izquierdo (cm)", 20.0, 100.0,
-                                       float(fila_e.get("muslo_izq_cm") or 55), 0.5,
-                                       key="emi", format="%.1f")
-                ebd = st.number_input("Brazo derecho (cm)", 15.0, 60.0,
-                                       float(fila_e.get("brazo_der_cm") or 28), 0.5,
-                                       key="ebd", format="%.1f")
-                ebi = st.number_input("Brazo izquierdo (cm)", 15.0, 60.0,
-                                       float(fila_e.get("brazo_izq_cm") or 28), 0.5,
-                                       key="ebi", format="%.1f")
-
-            e_imc   = calcular_imc(ep * LBS_A_KG, ea)
-            e_rcc   = calcular_rcc(ec, eca)
-            e_rel   = calcular_rel_hombros_cintura(eh, ec)
-
-            if st.button("💾 Guardar cambios", type="primary", key="btn_edit"):
-                uid = estado.get("user_id", "")
-                valores = [
-                    uid, str(fila_e.get("fecha","")), eg,
-                    str(fila_e.get("fecha_nacimiento","")),
-                    fila_e.get("edad_calculada",""),
-                    ep, ea, eh, epc, ec, eca, emd, emi, ebd, ebi,
-                    e_imc, e_rcc, e_rel,
-                    str(fila_e.get("notas",""))
-                ]
-                try:
-                    actualizar_fila_sheets("medidas", fn_s, valores)
-                    st.success("✅ Registro actualizado.")
-                    st.rerun()
-                except Exception as e:
-                    st.error(f"Error al actualizar: {e}")
-
         else:
             st.info("Aún no hay registros. ¡Agrega el primero arriba! 💪")
     except Exception as e:
         st.error(f"Error al cargar historial: {e}")
         st.exception(e)
+
+    # ── Editar registro ────────────────────────────────────────────────────────
+    if df is not None and not df.empty:
+        st.divider()
+        with st.expander("✏️ Editar un registro existente"):
+            fechas    = df["fecha"].astype(str).tolist()
+            fecha_sel = st.selectbox("Selecciona la fecha a editar", fechas, key="edit_fecha")
+            fila_e    = df[df["fecha"].astype(str) == fecha_sel].iloc[0]
+            fn_s      = int(fila_e["_fila_sheets"])
+
+            st.caption(f"Editando registro del {fecha_sel}")
+            e1, e2 = st.columns(2)
+            with e1:
+                eg  = st.radio("Género", ["Mujer","Hombre"],
+                                index=0 if str(fila_e.get("genero","Mujer")) == "Mujer" else 1,
+                                key="eg", horizontal=True)
+                ep  = st.number_input("Peso (lbs)", 66.0, 440.0,
+                                       float(fila_e.get("peso_lbs") or 132), 0.5, key="ep", format="%.1f")
+                ea  = st.number_input("Altura (cm)", 100.0, 220.0,
+                                       float(fila_e.get("altura_cm") or 165), 0.5, key="ea", format="%.1f")
+                eh  = st.number_input("Hombros (cm)", 50.0, 200.0,
+                                       float(fila_e.get("hombros_cm") or 100), 0.5, key="eh", format="%.1f")
+                epc = st.number_input("Pecho/Busto (cm)", 50.0, 200.0,
+                                       float(fila_e.get("pecho_cm") or 90), 0.5, key="epc", format="%.1f")
+            with e2:
+                ec  = st.number_input("Cintura (cm)", 40.0, 200.0,
+                                       float(fila_e.get("cintura_cm") or 75), 0.5, key="ec", format="%.1f")
+                eca = st.number_input("Cadera (cm)", 50.0, 200.0,
+                                       float(fila_e.get("cadera_cm") or 95), 0.5, key="eca", format="%.1f")
+                emd = st.number_input("Muslo derecho (cm)", 20.0, 100.0,
+                                       float(fila_e.get("muslo_der_cm") or 55), 0.5, key="emd", format="%.1f")
+                emi = st.number_input("Muslo izquierdo (cm)", 20.0, 100.0,
+                                       float(fila_e.get("muslo_izq_cm") or 55), 0.5, key="emi", format="%.1f")
+                ebd = st.number_input("Brazo derecho (cm)", 15.0, 60.0,
+                                       float(fila_e.get("brazo_der_cm") or 28), 0.5, key="ebd", format="%.1f")
+                ebi = st.number_input("Brazo izquierdo (cm)", 15.0, 60.0,
+                                       float(fila_e.get("brazo_izq_cm") or 28), 0.5, key="ebi", format="%.1f")
+
+            e_imc = calcular_imc(ep * LBS_A_KG, ea)
+            e_rcc = calcular_rcc(ec, eca)
+            e_rel = calcular_rel_hombros_cintura(eh, ec)
+
+            if st.button("💾 Guardar cambios", type="primary", key="btn_edit"):
+                uid2 = estado.get("user_id", "")
+                valores = [
+                    uid2, str(fila_e.get("fecha","")), eg,
+                    str(fila_e.get("fecha_nacimiento","")),
+                    fila_e.get("edad_calculada",""),
+                    ep, ea, eh, epc, ec, eca, emd, emi, ebd, ebi,
+                    e_imc, e_rcc, e_rel, str(fila_e.get("notas",""))
+                ]
+                try:
+                    actualizar_fila_sheets("medidas", fn_s, valores)
+                    st.success("✅ Registro actualizado.")
+                    st.rerun()
+                except Exception as ex:
+                    st.error(f"Error al actualizar: {ex}")
