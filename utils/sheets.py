@@ -92,3 +92,8 @@ def eliminar_fila_sheets(nombre: str, fila_sheets: int):
     """Elimina la fila usando su número real en Google Sheets."""
     ws = get_worksheet(nombre)
     ws.delete_rows(fila_sheets)
+
+def actualizar_fila_sheets(nombre: str, fila_sheets: int, valores: list):
+    """Actualiza una fila completa usando su número real en Google Sheets."""
+    ws = get_worksheet(nombre)
+    ws.update(f'A{fila_sheets}', [[str(v) if v is not None else "" for v in valores]])
