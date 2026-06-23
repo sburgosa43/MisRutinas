@@ -30,6 +30,7 @@ SHEETS_CONFIG = {
     "config":    ["user_id","clave","valor"],
     "ejercicios":["id","nombre","grupo_muscular","descripcion","url_youtube","dificultad","equipo","activo"],
     "evaluaciones_ia":["user_id","fecha","evaluacion_corporal","prioridades","programa_generado"],
+    "videos_workouts":["user_id","categoria","titulo","coach","duracion","nivel","equipo","descripcion","video_id","activo","fecha_agregado"],
 }
 
 
