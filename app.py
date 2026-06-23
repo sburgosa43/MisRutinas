@@ -229,9 +229,14 @@ with st.sidebar:
         st.rerun()
     st.caption("v1.7")
 
+import sys
 module_name = next(m for name, m in PAGES if name == selection)
 try:
-    module = importlib.import_module(module_name)
+    # Forzar recarga para evitar que Python sirva módulos cacheados incorrectamente
+    if module_name in sys.modules:
+        module = importlib.reload(sys.modules[module_name])
+    else:
+        module = importlib.import_module(module_name)
     module.mostrar()
 except Exception as e:
     st.error(f"Error cargando módulo: {e}")
