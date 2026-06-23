@@ -29,6 +29,7 @@ SHEETS_CONFIG = {
     "rutinas_sesiones": ["user_id","fecha","tipo_rutina","ejercicio","series","reps","peso_lbs","notas"],
     "config":    ["user_id","clave","valor"],
     "ejercicios":["id","nombre","grupo_muscular","descripcion","url_youtube","dificultad","equipo","activo"],
+    "ejercicios_videos":["ejercicio_id","nombre","url","user_id","fecha_actualizado"],
     "evaluaciones_ia":["user_id","fecha","evaluacion_corporal","prioridades","programa_generado"],
     "videos_workouts":["user_id","categoria","titulo","coach","duracion","nivel","equipo","descripcion","video_id","activo","fecha_agregado"],
 }
