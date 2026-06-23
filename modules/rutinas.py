@@ -448,7 +448,7 @@ def mostrar():
         st.warning("⚠️ Completa la **🧬 Evaluación Inicial** primero para obtener tu programa personalizado.")
         return
 
-    tab1, tab2, tab3 = st.tabs(["📋 Mi Programa", "💪 Ejercicios", "👩‍💻 Coaches"])
+    tab1, tab2, tab3, tab4 = st.tabs(["📋 Mi Programa", "💪 Ejercicios", "👩‍💻 Coaches", "🤖 Programa IA"])
 
     # ══════════════════════════════════════════════════════════════════════════
     # TAB 1 — MI PROGRAMA
@@ -649,3 +649,142 @@ def mostrar():
                         st.link_button("Canal ▶", coach["canal"], use_container_width=True)
                     st.markdown("---")
             st.divider()
+    # ══════════════════════════════════════════════════════════════════════════
+    # TAB 4 — PROGRAMA IA (Google Gemini)
+    # ══════════════════════════════════════════════════════════════════════════
+    with tab4:
+        st.subheader("🤖 Programa Personalizado con IA")
+        st.caption("Ingresa los resultados de tu evaluación corporal profesional y la IA generará un programa completamente personalizado.")
+
+        # Verificar API key
+        try:
+            from utils.gemini import get_api_key, consultar_gemini, construir_prompt_programa
+            api_key = get_api_key()
+            tiene_api = bool(api_key)
+        except Exception:
+            tiene_api = False
+
+        if not tiene_api:
+            st.warning("⚙️ **API de Gemini no configurada.** Agrega `GEMINI_API_KEY` en los Secrets de Streamlit Cloud.")
+            st.code('''# En Streamlit Cloud → Settings → Secrets, agrega:
+GEMINI_API_KEY = "tu-api-key-aqui"
+
+# Obtén tu API key gratis en:
+# https://aistudio.google.com/app/apikey''')
+            st.info("La API de Gemini es **completamente gratuita** hasta 1 millón de tokens/día. No requiere tarjeta de crédito.")
+        else:
+            st.success("✅ Gemini API configurada y lista.")
+
+        st.divider()
+
+        col_form, col_tips = st.columns([3, 1])
+        with col_tips:
+            st.markdown("**💡 Tips para mejores resultados:**")
+            st.caption("• Incluye los hallazgos del profesional lo más detallado posible")
+            st.caption("• Menciona desequilibrios musculares específicos")
+            st.caption("• Si tienes resultados de postura, inclúyelos")
+            st.caption("• El programa se adapta a tu equipo y horario de tu evaluación")
+
+        with col_form:
+            evaluacion_corporal = st.text_area(
+                "📋 Resultados de tu evaluación corporal",
+                placeholder="""Ejemplo:
+- Hombro derecho más alto que el izquierdo (escoliosis leve)
+- Glúteo medio débil bilateralmente
+- Isquiotibiales tensos, especialmente pierna derecha
+- Core débil, tendencia a hiperextensión lumbar
+- Cuádriceps dominantes sobre glúteos en sentadilla
+- Postura: cabeza adelantada, hombros redondeados""",
+                height=180,
+                key="eval_corp"
+            )
+
+            prioridades = st.multiselect(
+                "🎯 Prioridades identificadas en la evaluación",
+                ["Activación de glúteo medio", "Fuerza de core", "Estabilidad lumbar",
+                 "Corrección postural", "Equilibrio muscular (Der/Izq)", "Movilidad de caderas",
+                 "Fuerza de isquiotibiales", "Estabilidad de hombros", "Movilidad torácica",
+                 "Fuerza de cuádriceps", "Flexibilidad general", "Control motor",
+                 "Resistencia cardiovascular", "Potencia explosiva"],
+                key="prioridades_ia"
+            )
+
+            notas_adicionales = st.text_input(
+                "📝 Notas adicionales o metas específicas (opcional)",
+                placeholder="Ej: quiero mejorar mi postura para el trabajo en escritorio",
+                key="notas_ia"
+            )
+
+        st.divider()
+
+        if st.button("⚡ Generar programa personalizado con IA",
+                      type="primary", use_container_width=True,
+                      disabled=not tiene_api):
+            if not evaluacion_corporal.strip() and not prioridades:
+                st.warning("Ingresa al menos los resultados de la evaluación o selecciona prioridades.")
+            else:
+                eval_completa = evaluacion_corporal
+                if notas_adicionales:
+                    eval_completa += f"\n\nNotas adicionales: {notas_adicionales}"
+
+                with st.spinner("🧠 Generando tu programa personalizado... (10-20 segundos)"):
+                    try:
+                        perfil = {
+                            "genero":        estado.get("genero", "Mujer"),
+                            "eval_objetivo": estado.get("eval_objetivo", ""),
+                            "eval_nivel":    estado.get("eval_nivel", ""),
+                            "eval_dias":     estado.get("eval_dias", 3),
+                            "eval_duracion": estado.get("eval_duracion", "60 min"),
+                            "eval_equipo":   estado.get("eval_equipo", ""),
+                            "eval_lesiones": estado.get("eval_lesiones", ""),
+                            "med_peso":      estado.get("med_peso", ""),
+                            "med_altura":    estado.get("med_altura", ""),
+                            "nombre_usuario":st.session_state.get("nombre_usuario", ""),
+                        }
+                        prompt   = construir_prompt_programa(perfil, eval_completa, prioridades)
+                        programa = consultar_gemini(prompt)
+
+                        st.success("✅ ¡Programa generado!")
+                        st.divider()
+
+                        # Mostrar resultado con formato bonito
+                        st.markdown(f"""
+<div style="background:#141708;border:1px solid rgba(196,228,56,0.3);
+            border-radius:10px;padding:24px;line-height:1.7;">
+{programa.replace(chr(10), "<br>")}
+</div>""", unsafe_allow_html=True)
+
+                        st.divider()
+
+                        # Guardar en Sheets
+                        try:
+                            from utils.sheets import guardar_fila_usuario
+                            guardar_fila_usuario("evaluaciones_ia", [
+                                str(date.today()),
+                                evaluacion_corporal[:500],
+                                ", ".join(prioridades),
+                                programa[:2000]
+                            ], uid)
+                            st.caption("💾 Programa guardado en tu historial.")
+                        except Exception:
+                            pass  # No bloquear si falla el guardado
+
+                        # Botón de descarga
+                        st.download_button(
+                            "⬇️ Descargar programa como texto",
+                            data=programa,
+                            file_name=f"programa_ia_{date.today()}.txt",
+                            mime="text/plain"
+                        )
+
+                    except ValueError as e:
+                        if "GEMINI_API_KEY" in str(e):
+                            st.error("❌ API key no configurada.")
+                        else:
+                            st.error(f"❌ Error: {e}")
+                    except ConnectionError as e:
+                        st.error(f"❌ Error de conexión con Gemini: {e}")
+                    except Exception as e:
+                        st.error(f"❌ Error inesperado: {e}")
+                        st.exception(e)
+
