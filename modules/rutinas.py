@@ -867,11 +867,6 @@ def mostrar():
                         elif ej.get("url"):
                             st.link_button("🔍 Ver", ej["url"], use_container_width=True)
 
-                    # Tutorial embebido expandible
-                    vid_id = _EJ_VIDEOS.get(ej.get("id",""))
-                    if vid_id:
-                        with st.expander(f"🎬 Tutorial: {ej['nombre']}", expanded=False):
-                            st.video(f"https://www.youtube.com/watch?v={vid_id}")
                     st.markdown("---")
 
         # Registro de sesión
@@ -898,54 +893,158 @@ def mostrar():
 
 
     # ══════════════════════════════════════════════════════════════════════════
-    # TAB 4 — EJERCICIOS
+    # TAB 4 — EJERCICIOS (con gestión de videos)
     # ══════════════════════════════════════════════════════════════════════════
     with tab4:
         st.subheader("💪 Biblioteca de ejercicios")
-        st.caption("Videos cortos (<4 min) priorizando coaches top: Bret Contreras · Jeff Nippard · Squat University · Heather Robertson")
+        st.caption("Coach top prioritario · Link directo a YouTube cuando disponible.")
 
-        grupos_disponibles = sorted(set(e["grupo"] for e in EJERCICIOS_BASE))
-        col_f1, col_f2, col_f3 = st.columns(3)
-        with col_f1:
-            grupo_filtro = st.selectbox("Grupo muscular", ["Todos"] + grupos_disponibles)
-        with col_f2:
-            dif_filtro = st.selectbox("Dificultad", ["Todos","principiante","intermedio","avanzado"])
-        with col_f3:
-            solo_mi_equipo = st.checkbox("Solo mi equipo", value=True)
+        # ── Cargar URLs personalizadas desde Sheets ───────────────────────────
+        urls_personalizadas = {}
+        try:
+            from utils.sheets import leer_df
+            df_ej_vids = leer_df("ejercicios_videos")
+            if not df_ej_vids.empty:
+                for _, row in df_ej_vids.iterrows():
+                    eid = str(row.get("ejercicio_id","")).strip()
+                    url = str(row.get("url","")).strip()
+                    if eid and url:
+                        urls_personalizadas[eid] = url
+        except Exception:
+            pass
 
-        ejercicios_filtrados = EJERCICIOS_BASE.copy()
-        if grupo_filtro != "Todos":
-            ejercicios_filtrados = [e for e in ejercicios_filtrados if e["grupo"] == grupo_filtro]
-        if dif_filtro != "Todos":
-            ejercicios_filtrados = [e for e in ejercicios_filtrados if e["dificultad"] == dif_filtro]
-        if solo_mi_equipo and equipo_lista:
-            ejercicios_filtrados = [e for e in ejercicios_filtrados
-                                     if any(eq in equipo_lista for eq in e["equipo"])]
+        # ── Filtros ───────────────────────────────────────────────────────────
+        grupos_disp = sorted(set(e["grupo"] for e in EJERCICIOS_BASE))
+        cf1, cf2, cf3 = st.columns(3)
+        with cf1:
+            grupo_f = st.selectbox("Grupo muscular", ["Todos"] + grupos_disp, key="ej_grupo")
+        with cf2:
+            dif_f = st.selectbox("Dificultad", ["Todos","principiante","intermedio","avanzado"], key="ej_dif")
+        with cf3:
+            equipo_f = st.checkbox("Solo mi equipo", value=True, key="ej_equipo")
 
-        st.caption(f"{len(ejercicios_filtrados)} ejercicio(s) encontrado(s)")
+        ejs_filt = EJERCICIOS_BASE.copy()
+        if grupo_f != "Todos":
+            ejs_filt = [e for e in ejs_filt if e["grupo"] == grupo_f]
+        if dif_f != "Todos":
+            ejs_filt = [e for e in ejs_filt if e["dificultad"] == dif_f]
+        if equipo_f and equipo_lista:
+            ejs_filt = [e for e in ejs_filt if any(q in equipo_lista for q in e["equipo"])]
+
+        st.caption(f"{len(ejs_filt)} ejercicio(s) · {len(urls_personalizadas)} con video curado")
         st.divider()
 
-        for ej in ejercicios_filtrados:
+        # ── Lista de ejercicios ───────────────────────────────────────────────
+        for ej in ejs_filt:
             with st.expander(f"**{ej['nombre']}** — {ej['grupo']}"):
                 col_d, col_v = st.columns([4, 1])
                 with col_d:
-                    dif_color = {"principiante":"#dcfce7","intermedio":"#fef9c3","avanzado":"#fee2e2"}.get(ej["dificultad"],"#f1f5f9")
+                    dif_colors = {"principiante":("#0f3d1a","#90ff90"),
+                                  "intermedio":("#3d3800","#ffe060"),
+                                  "avanzado":("#3d0f0f","#ff9090")}
+                    bg, fg = dif_colors.get(ej["dificultad"],("#141708","#c4e438"))
                     st.markdown(
-                        f"{badge(ej['grupo'],'#e0e7ff')} &nbsp;"
-                        f"{badge(ej['dificultad'], dif_color)} &nbsp;"
-                        f"{badge(', '.join(ej['equipo'][:2]),'#f1f5f9')}",
+                        f'{badge(ej["grupo"],"#1a2040")} &nbsp;'
+                        f'<span style="background:{bg};color:{fg};font-size:10px;'
+                        f'padding:2px 7px;border-radius:8px;font-weight:600;">'
+                        f'{ej["dificultad"]}</span>',
                         unsafe_allow_html=True)
                     st.markdown(f"**Técnica:** {ej['descripcion']}")
                     if ej.get("coach"):
-                        st.caption(f"👩‍💻 Coach recomendado: {ej['coach']}")
-                    if lesiones and any(l in ej.get("lesiones_evitar", []) for l in lesiones):
-                        st.warning("⚠️ Este ejercicio puede agravar tus lesiones reportadas.")
+                        st.caption(f"👩‍💻 Coach: {ej['coach']}")
+                    if lesiones and any(l in ej.get("lesiones_evitar",[]) for l in lesiones):
+                        st.warning("⚠️ Puede agravar tus lesiones reportadas.")
+
                 with col_v:
-                    vid_id = _EJ_VIDEOS.get(ej["id"])
-                    if vid_id:
-                        st.video(f"https://www.youtube.com/watch?v={vid_id}")
-                    elif ej.get("url"):
-                        st.link_button("🔍 Buscar tutorial", ej["url"], use_container_width=True)
+                    # URL curada si existe, si no → búsqueda YouTube
+                    url_video = urls_personalizadas.get(ej["id"], ej.get("url",""))
+                    tiene_curado = ej["id"] in urls_personalizadas
+                    label = "▶ Tutorial ✓" if tiene_curado else "🔍 Buscar"
+                    if url_video:
+                        st.link_button(label, url_video, use_container_width=True)
+                    if tiene_curado:
+                        st.caption("📌 Video curado")
+
+        # ── Gestión de videos ─────────────────────────────────────────────────
+        st.divider()
+        with st.expander("⚙️ Gestionar videos de ejercicios", expanded=False):
+            st.caption("Pega el URL de YouTube para cualquier ejercicio. Se guarda para todos los usuarios.")
+
+            nombres_ejs = {e["nombre"]: e for e in EJERCICIOS_BASE}
+            ej_sel_nombre = st.selectbox(
+                "Selecciona el ejercicio",
+                [e["nombre"] for e in EJERCICIOS_BASE],
+                key="mgmt_ej_sel"
+            )
+            ej_sel = nombres_ejs[ej_sel_nombre]
+
+            # Mostrar URL actual
+            url_actual = urls_personalizadas.get(ej_sel["id"], "")
+            if url_actual:
+                st.success(f"✅ Video actual: `{url_actual}`")
+            else:
+                st.caption(f"Búsqueda actual: `{ej_sel.get('url','')}`")
+
+            nueva_url = st.text_input(
+                "Nueva URL de YouTube",
+                value=url_actual,
+                placeholder="https://www.youtube.com/watch?v=...",
+                key="mgmt_url"
+            )
+
+            # Preview
+            import re
+            vid_prev = None
+            if nueva_url.strip():
+                for pat in [r'v=([a-zA-Z0-9_-]{11})', r'youtu[.]be/([a-zA-Z0-9_-]{11})',
+                             r'embed/([a-zA-Z0-9_-]{11})', r'^([a-zA-Z0-9_-]{11})$']:
+                    m = re.search(pat, nueva_url.strip())
+                    if m:
+                        vid_prev = m.group(1)
+                        break
+
+            col_prev, col_save = st.columns([3, 1])
+            with col_prev:
+                if vid_prev:
+                    st.caption(f"Preview — ID: `{vid_prev}`")
+                    st.video(f"https://www.youtube.com/watch?v={vid_prev}")
+                elif nueva_url:
+                    st.warning("No se pudo extraer el ID. Verifica la URL.")
+            with col_save:
+                if st.button("💾 Guardar", type="primary", key="mgmt_save"):
+                    if not nueva_url.strip():
+                        st.error("Ingresa una URL.")
+                    else:
+                        try:
+                            from utils.sheets import get_worksheet, leer_df
+                            ws = get_worksheet("ejercicios_videos")
+                            df_check = leer_df("ejercicios_videos")
+                            # Update if exists, insert if not
+                            if not df_check.empty and ej_sel["id"] in df_check["ejercicio_id"].values:
+                                idx = df_check[df_check["ejercicio_id"]==ej_sel["id"]].index[0]
+                                ws.update_cell(idx + 2, 3, nueva_url.strip())
+                                ws.update_cell(idx + 2, 5, str(date.today()))
+                            else:
+                                ws.append_row([ej_sel["id"], ej_sel_nombre,
+                                               nueva_url.strip(), uid, str(date.today())])
+                            st.success(f"✅ Video de '{ej_sel_nombre}' actualizado.")
+                            st.rerun()
+                        except Exception as ex:
+                            st.error(f"Error: {ex}")
+
+                if url_actual and st.button("🗑️ Quitar", key="mgmt_del"):
+                    try:
+                        from utils.sheets import get_worksheet, leer_df
+                        ws = get_worksheet("ejercicios_videos")
+                        df_check = leer_df("ejercicios_videos")
+                        if not df_check.empty and ej_sel["id"] in df_check["ejercicio_id"].values:
+                            idx = df_check[df_check["ejercicio_id"]==ej_sel["id"]].index[0]
+                            ws.delete_rows(idx + 2)
+                            st.success("Video eliminado.")
+                            st.rerun()
+                    except Exception as ex:
+                        st.error(f"Error: {ex}")
+
 
     # ══════════════════════════════════════════════════════════════════════════
     # TAB 5 — COACHES
@@ -1740,11 +1839,6 @@ def mostrar():
                         elif ej.get("url"):
                             st.link_button("🔍 Ver", ej["url"], use_container_width=True)
 
-                    # Tutorial embebido expandible
-                    vid_id = _EJ_VIDEOS.get(ej.get("id",""))
-                    if vid_id:
-                        with st.expander(f"🎬 Tutorial: {ej['nombre']}", expanded=False):
-                            st.video(f"https://www.youtube.com/watch?v={vid_id}")
                     st.markdown("---")
 
         # Registro de sesión
@@ -1771,54 +1865,158 @@ def mostrar():
 
 
     # ══════════════════════════════════════════════════════════════════════════
-    # TAB 4 — EJERCICIOS
+    # TAB 4 — EJERCICIOS (con gestión de videos)
     # ══════════════════════════════════════════════════════════════════════════
     with tab4:
         st.subheader("💪 Biblioteca de ejercicios")
-        st.caption("Videos cortos (<4 min) priorizando coaches top: Bret Contreras · Jeff Nippard · Squat University · Heather Robertson")
+        st.caption("Coach top prioritario · Link directo a YouTube cuando disponible.")
 
-        grupos_disponibles = sorted(set(e["grupo"] for e in EJERCICIOS_BASE))
-        col_f1, col_f2, col_f3 = st.columns(3)
-        with col_f1:
-            grupo_filtro = st.selectbox("Grupo muscular", ["Todos"] + grupos_disponibles)
-        with col_f2:
-            dif_filtro = st.selectbox("Dificultad", ["Todos","principiante","intermedio","avanzado"])
-        with col_f3:
-            solo_mi_equipo = st.checkbox("Solo mi equipo", value=True)
+        # ── Cargar URLs personalizadas desde Sheets ───────────────────────────
+        urls_personalizadas = {}
+        try:
+            from utils.sheets import leer_df
+            df_ej_vids = leer_df("ejercicios_videos")
+            if not df_ej_vids.empty:
+                for _, row in df_ej_vids.iterrows():
+                    eid = str(row.get("ejercicio_id","")).strip()
+                    url = str(row.get("url","")).strip()
+                    if eid and url:
+                        urls_personalizadas[eid] = url
+        except Exception:
+            pass
 
-        ejercicios_filtrados = EJERCICIOS_BASE.copy()
-        if grupo_filtro != "Todos":
-            ejercicios_filtrados = [e for e in ejercicios_filtrados if e["grupo"] == grupo_filtro]
-        if dif_filtro != "Todos":
-            ejercicios_filtrados = [e for e in ejercicios_filtrados if e["dificultad"] == dif_filtro]
-        if solo_mi_equipo and equipo_lista:
-            ejercicios_filtrados = [e for e in ejercicios_filtrados
-                                     if any(eq in equipo_lista for eq in e["equipo"])]
+        # ── Filtros ───────────────────────────────────────────────────────────
+        grupos_disp = sorted(set(e["grupo"] for e in EJERCICIOS_BASE))
+        cf1, cf2, cf3 = st.columns(3)
+        with cf1:
+            grupo_f = st.selectbox("Grupo muscular", ["Todos"] + grupos_disp, key="ej_grupo")
+        with cf2:
+            dif_f = st.selectbox("Dificultad", ["Todos","principiante","intermedio","avanzado"], key="ej_dif")
+        with cf3:
+            equipo_f = st.checkbox("Solo mi equipo", value=True, key="ej_equipo")
 
-        st.caption(f"{len(ejercicios_filtrados)} ejercicio(s) encontrado(s)")
+        ejs_filt = EJERCICIOS_BASE.copy()
+        if grupo_f != "Todos":
+            ejs_filt = [e for e in ejs_filt if e["grupo"] == grupo_f]
+        if dif_f != "Todos":
+            ejs_filt = [e for e in ejs_filt if e["dificultad"] == dif_f]
+        if equipo_f and equipo_lista:
+            ejs_filt = [e for e in ejs_filt if any(q in equipo_lista for q in e["equipo"])]
+
+        st.caption(f"{len(ejs_filt)} ejercicio(s) · {len(urls_personalizadas)} con video curado")
         st.divider()
 
-        for ej in ejercicios_filtrados:
+        # ── Lista de ejercicios ───────────────────────────────────────────────
+        for ej in ejs_filt:
             with st.expander(f"**{ej['nombre']}** — {ej['grupo']}"):
                 col_d, col_v = st.columns([4, 1])
                 with col_d:
-                    dif_color = {"principiante":"#dcfce7","intermedio":"#fef9c3","avanzado":"#fee2e2"}.get(ej["dificultad"],"#f1f5f9")
+                    dif_colors = {"principiante":("#0f3d1a","#90ff90"),
+                                  "intermedio":("#3d3800","#ffe060"),
+                                  "avanzado":("#3d0f0f","#ff9090")}
+                    bg, fg = dif_colors.get(ej["dificultad"],("#141708","#c4e438"))
                     st.markdown(
-                        f"{badge(ej['grupo'],'#e0e7ff')} &nbsp;"
-                        f"{badge(ej['dificultad'], dif_color)} &nbsp;"
-                        f"{badge(', '.join(ej['equipo'][:2]),'#f1f5f9')}",
+                        f'{badge(ej["grupo"],"#1a2040")} &nbsp;'
+                        f'<span style="background:{bg};color:{fg};font-size:10px;'
+                        f'padding:2px 7px;border-radius:8px;font-weight:600;">'
+                        f'{ej["dificultad"]}</span>',
                         unsafe_allow_html=True)
                     st.markdown(f"**Técnica:** {ej['descripcion']}")
                     if ej.get("coach"):
-                        st.caption(f"👩‍💻 Coach recomendado: {ej['coach']}")
-                    if lesiones and any(l in ej.get("lesiones_evitar", []) for l in lesiones):
-                        st.warning("⚠️ Este ejercicio puede agravar tus lesiones reportadas.")
+                        st.caption(f"👩‍💻 Coach: {ej['coach']}")
+                    if lesiones and any(l in ej.get("lesiones_evitar",[]) for l in lesiones):
+                        st.warning("⚠️ Puede agravar tus lesiones reportadas.")
+
                 with col_v:
-                    vid_id = _EJ_VIDEOS.get(ej["id"])
-                    if vid_id:
-                        st.video(f"https://www.youtube.com/watch?v={vid_id}")
-                    elif ej.get("url"):
-                        st.link_button("🔍 Buscar tutorial", ej["url"], use_container_width=True)
+                    # URL curada si existe, si no → búsqueda YouTube
+                    url_video = urls_personalizadas.get(ej["id"], ej.get("url",""))
+                    tiene_curado = ej["id"] in urls_personalizadas
+                    label = "▶ Tutorial ✓" if tiene_curado else "🔍 Buscar"
+                    if url_video:
+                        st.link_button(label, url_video, use_container_width=True)
+                    if tiene_curado:
+                        st.caption("📌 Video curado")
+
+        # ── Gestión de videos ─────────────────────────────────────────────────
+        st.divider()
+        with st.expander("⚙️ Gestionar videos de ejercicios", expanded=False):
+            st.caption("Pega el URL de YouTube para cualquier ejercicio. Se guarda para todos los usuarios.")
+
+            nombres_ejs = {e["nombre"]: e for e in EJERCICIOS_BASE}
+            ej_sel_nombre = st.selectbox(
+                "Selecciona el ejercicio",
+                [e["nombre"] for e in EJERCICIOS_BASE],
+                key="mgmt_ej_sel"
+            )
+            ej_sel = nombres_ejs[ej_sel_nombre]
+
+            # Mostrar URL actual
+            url_actual = urls_personalizadas.get(ej_sel["id"], "")
+            if url_actual:
+                st.success(f"✅ Video actual: `{url_actual}`")
+            else:
+                st.caption(f"Búsqueda actual: `{ej_sel.get('url','')}`")
+
+            nueva_url = st.text_input(
+                "Nueva URL de YouTube",
+                value=url_actual,
+                placeholder="https://www.youtube.com/watch?v=...",
+                key="mgmt_url"
+            )
+
+            # Preview
+            import re
+            vid_prev = None
+            if nueva_url.strip():
+                for pat in [r'v=([a-zA-Z0-9_-]{11})', r'youtu[.]be/([a-zA-Z0-9_-]{11})',
+                             r'embed/([a-zA-Z0-9_-]{11})', r'^([a-zA-Z0-9_-]{11})$']:
+                    m = re.search(pat, nueva_url.strip())
+                    if m:
+                        vid_prev = m.group(1)
+                        break
+
+            col_prev, col_save = st.columns([3, 1])
+            with col_prev:
+                if vid_prev:
+                    st.caption(f"Preview — ID: `{vid_prev}`")
+                    st.video(f"https://www.youtube.com/watch?v={vid_prev}")
+                elif nueva_url:
+                    st.warning("No se pudo extraer el ID. Verifica la URL.")
+            with col_save:
+                if st.button("💾 Guardar", type="primary", key="mgmt_save"):
+                    if not nueva_url.strip():
+                        st.error("Ingresa una URL.")
+                    else:
+                        try:
+                            from utils.sheets import get_worksheet, leer_df
+                            ws = get_worksheet("ejercicios_videos")
+                            df_check = leer_df("ejercicios_videos")
+                            # Update if exists, insert if not
+                            if not df_check.empty and ej_sel["id"] in df_check["ejercicio_id"].values:
+                                idx = df_check[df_check["ejercicio_id"]==ej_sel["id"]].index[0]
+                                ws.update_cell(idx + 2, 3, nueva_url.strip())
+                                ws.update_cell(idx + 2, 5, str(date.today()))
+                            else:
+                                ws.append_row([ej_sel["id"], ej_sel_nombre,
+                                               nueva_url.strip(), uid, str(date.today())])
+                            st.success(f"✅ Video de '{ej_sel_nombre}' actualizado.")
+                            st.rerun()
+                        except Exception as ex:
+                            st.error(f"Error: {ex}")
+
+                if url_actual and st.button("🗑️ Quitar", key="mgmt_del"):
+                    try:
+                        from utils.sheets import get_worksheet, leer_df
+                        ws = get_worksheet("ejercicios_videos")
+                        df_check = leer_df("ejercicios_videos")
+                        if not df_check.empty and ej_sel["id"] in df_check["ejercicio_id"].values:
+                            idx = df_check[df_check["ejercicio_id"]==ej_sel["id"]].index[0]
+                            ws.delete_rows(idx + 2)
+                            st.success("Video eliminado.")
+                            st.rerun()
+                    except Exception as ex:
+                        st.error(f"Error: {ex}")
+
 
     # ══════════════════════════════════════════════════════════════════════════
     # TAB 5 — COACHES
