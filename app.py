@@ -7,7 +7,7 @@ st.set_page_config(page_title="Mis Rutinas", page_icon="🏋️",
 
 st.markdown("""
 <style>
-[data-testid="stSidebar"] { background-color: #2061c9; }
+[data-testid="stSidebar"] { background-color: #6cb6ec; }
 [data-testid="stSidebar"] label,
 [data-testid="stSidebar"] .stRadio p,
 [data-testid="stSidebar"] span,
