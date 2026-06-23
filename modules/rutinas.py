@@ -423,6 +423,98 @@ def badge(texto: str, color: str) -> str:
 
 
 # ══════════════════════════════════════════════════════════════════════════════
+# BASE DE WORKOUTS COMPLETOS  (Opción A: video curado | B: búsqueda fallback)
+# ══════════════════════════════════════════════════════════════════════════════
+# Mapa de video_id por ejercicio para embed directo (coaches top)
+_EJ_VIDEOS = {
+    "g01": "IncLBJCfgSY",  "g02": "2Vprklk8E-g",  "g03": "2Vprklk8E-g",
+    "g04": "2C-uNgKwPLE",  "g05": "SXEDFkMa8xE",  "q01": "ultWZbUMPL8",
+    "q02": "MeIiIdhvXT4",  "q05": "D7KaRcUTQeE",  "i01": "jEy_czb3RKA",
+    "i02": "jEy_czb3RKA",  "e01": "CAwf7n6Luuc",  "e02": "roCP442wSsA",
+    "e03": "G8l_8chR5BE",  "e04": "rep-qVOkqgk",  "p02": "IODxDxX7oi4",
+    "h02": "XPPfnSEATJA",  "b01": "ykJmrZ5v0Oo",  "c01": "F-nQ_KJgfCY",
+    "c02": "4XLEnwUr1d8",  "c03": "wiFNA3sqjCA",
+}
+
+WORKOUTS_DB = {
+    "🔥 HIIT": [
+        {"titulo":"30 Min Full Body HIIT — Sin equipo","coach":"Heather Robertson",
+         "duracion":"30 min","nivel":"Intermedio","equipo":"Sin equipo",
+         "descripcion":"HIIT de cuerpo completo con 28 ejercicios. Sin equipo, desde casa.",
+         "video_id":"Emu7uB59E2g","busqueda":"heather robertson 30 min full body HIIT no equipment"},
+        {"titulo":"15 Min HIIT + Abs","coach":"Heather Robertson",
+         "duracion":"15 min","nivel":"Intermedio","equipo":"Sin equipo",
+         "descripcion":"Cardio HIIT y abdomen en solo 15 minutos. Perfecta para días cortos.",
+         "video_id":"GDY8g5KME9E","busqueda":"heather robertson 15 min HIIT abs workout"},
+        {"titulo":"Low Impact HIIT — Sin saltos","coach":"Heather Robertson",
+         "duracion":"30 min","nivel":"Principiante","equipo":"Sin equipo",
+         "descripcion":"HIIT de bajo impacto. Ideal para principiantes o fase menstrual.",
+         "video_id":"aFBRopKNGfw","busqueda":"heather robertson low impact HIIT no jumping"},
+        {"titulo":"Fat Burning HIIT — Sin repeticiones","coach":"Heather Robertson",
+         "duracion":"30 min","nivel":"Intermedio","equipo":"Sin equipo",
+         "descripcion":"HIIT quema grasa sin repetir ejercicios. Gran variedad.",
+         "video_id":"AZ-rJgdOYGU","busqueda":"heather robertson fat burning HIIT no repeats"},
+    ],
+    "🦵 Piernas & Glúteos": [
+        {"titulo":"Killer Leg Day — Fuerza","coach":"Heather Robertson",
+         "duracion":"35 min","nivel":"Intermedio","equipo":"Mancuernas opcionales",
+         "descripcion":"Entrenamiento completo de piernas enfocado en fuerza y forma correcta.",
+         "video_id":"eemRXHKsGIc","busqueda":"heather robertson killer leg day strength workout"},
+        {"titulo":"HIIT Brutal — Piernas + Glúteos","coach":"Heather Robertson",
+         "duracion":"30 min","nivel":"Avanzado","equipo":"Sin equipo",
+         "descripcion":"Piernas y glúteos en formato HIIT. Perfecto para fase folicular.",
+         "video_id":"sSiq1opmejo","busqueda":"heather robertson brutal legs glutes HIIT"},
+        {"titulo":"Legs & Glutes Power","coach":"Heather Robertson",
+         "duracion":"30 min","nivel":"Intermedio","equipo":"Sin equipo",
+         "descripcion":"Potencia en piernas y glúteos. Ideal fase folicular u ovulatoria.",
+         "video_id":"2QAXtSiShbc","busqueda":"heather robertson legs glutes power workout"},
+        {"titulo":"Booty + Piernas — Sin equipo","coach":"Heather Robertson",
+         "duracion":"30 min","nivel":"Intermedio","equipo":"Sin equipo",
+         "descripcion":"Glúteos y piernas desde casa. Sin equipo necesario.",
+         "video_id":"pcJsP4gogsI","busqueda":"heather robertson booty leg no equipment"},
+    ],
+    "💪 Full Body": [
+        {"titulo":"Full Body con Mancuernas — 30 min","coach":"Heather Robertson",
+         "duracion":"30 min","nivel":"Intermedio","equipo":"Mancuernas",
+         "descripcion":"Cuerpo completo combinando fuerza y cardio. Mancuernas requeridas.",
+         "video_id":"Q3aYsLpAogA","busqueda":"heather robertson full body workout with weights 30 minutes"},
+        {"titulo":"Full Body Fuerza + Cardio","coach":"Heather Robertson",
+         "duracion":"30 min","nivel":"Intermedio","equipo":"Sin equipo",
+         "descripcion":"Combina fuerza y cardio en un entrenamiento completo y eficiente.",
+         "video_id":"m1z7zSWatwo","busqueda":"heather robertson full body HIIT strength cardio"},
+        {"titulo":"Full Body HIIT — 20 min","coach":"Heather Robertson",
+         "duracion":"20 min","nivel":"Intermedio","equipo":"Sin equipo",
+         "descripcion":"Cuerpo completo en solo 20 minutos. Ideal cuando el tiempo es limitado.",
+         "video_id":"Gzp8IA2vW_Q","busqueda":"heather robertson 20 minute full body HIIT home"},
+    ],
+    "🏋️ Core & Abdomen": [
+        {"titulo":"Core + Abs — 12 minutos","coach":"Heather Robertson",
+         "duracion":"12 min","nivel":"Principiante","equipo":"Mat",
+         "descripcion":"Core en llamas en 12 minutos. Sin equipo, solo mat.",
+         "video_id":"nkMhnd2kWIQ","busqueda":"heather robertson core ab workout 12 minutes"},
+        {"titulo":"11 Min Abs — Sin repeticiones","coach":"Heather Robertson",
+         "duracion":"11 min","nivel":"Intermedio","equipo":"Mat",
+         "descripcion":"11 minutos sin repetir ejercicios. Variedad total de abdomen.",
+         "video_id":"1LMNa9C8gOo","busqueda":"heather robertson 11 minute abs no repeats"},
+        {"titulo":"Abs + Booty Workout","coach":"Heather Robertson",
+         "duracion":"20 min","nivel":"Intermedio","equipo":"Sin equipo",
+         "descripcion":"La combinación ganadora: abdomen y glúteos en una sesión.",
+         "video_id":"za43d9iUZ4M","busqueda":"heather robertson abs booty workout"},
+    ],
+    "🧘 Movilidad & Yoga": [
+        {"titulo":"Morning Yoga — Energía y flexibilidad","coach":"Yoga with Adriene",
+         "duracion":"20 min","nivel":"Principiante","equipo":"Mat",
+         "descripcion":"Yoga matutino para energizar el cuerpo. Ideal para recuperación.",
+         "video_id":"v7AYKMP6rOE","busqueda":"yoga with adriene morning yoga 20 minutes"},
+        {"titulo":"Yoga para Alivio del Estrés","coach":"Yoga with Adriene",
+         "duracion":"25 min","nivel":"Principiante","equipo":"Mat",
+         "descripcion":"Yoga restaurativo para reducir el estrés y recuperar el cuerpo.",
+         "video_id":"hJbRpHZr_d0","busqueda":"yoga with adriene stress relief yoga"},
+    ],
+}
+
+
+# ══════════════════════════════════════════════════════════════════════════════
 # MÓDULO PRINCIPAL
 # ══════════════════════════════════════════════════════════════════════════════
 def mostrar():
@@ -547,8 +639,11 @@ def mostrar():
                         st.caption(f"📊 {rep_scheme} · ⏱ {descanso} descanso")
                         st.caption(ej["descripcion"][:120] + "..." if len(ej["descripcion"]) > 120 else ej["descripcion"])
                     with col_link:
-                        if ej.get("url"):
-                            st.link_button("▶ Video", ej["url"], use_container_width=True)
+                        vid_id = _EJ_VIDEOS.get(ej.get("id",""))
+                        if vid_id:
+                            st.link_button("▶ Tutorial", f"https://www.youtube.com/watch?v={vid_id}", use_container_width=True)
+                        elif ej.get("url"):
+                            st.link_button("🔍 Buscar", ej["url"], use_container_width=True)
                     st.markdown("---")
 
         # Registro de sesión
@@ -572,6 +667,7 @@ def mostrar():
                     st.success("✅ Sesión registrada.")
                 except Exception as e:
                     st.error(f"Error: {e}")
+
 
     # ══════════════════════════════════════════════════════════════════════════
     # TAB 2 — EJERCICIOS
@@ -617,8 +713,11 @@ def mostrar():
                     if lesiones and any(l in ej.get("lesiones_evitar", []) for l in lesiones):
                         st.warning("⚠️ Este ejercicio puede agravar tus lesiones reportadas.")
                 with col_v:
-                    if ej.get("url"):
-                        st.link_button("▶ Video corto", ej["url"], use_container_width=True)
+                    vid_id = _EJ_VIDEOS.get(ej["id"])
+                    if vid_id:
+                        st.video(f"https://www.youtube.com/watch?v={vid_id}")
+                    elif ej.get("url"):
+                        st.link_button("🔍 Buscar tutorial", ej["url"], use_container_width=True)
 
     # ══════════════════════════════════════════════════════════════════════════
     # TAB 3 — COACHES
