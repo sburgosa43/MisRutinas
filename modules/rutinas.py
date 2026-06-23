@@ -448,7 +448,7 @@ def mostrar():
         st.warning("⚠️ Completa la **🧬 Evaluación Inicial** primero para obtener tu programa personalizado.")
         return
 
-    tab1, tab2, tab3, tab4 = st.tabs(["📋 Mi Programa", "💪 Ejercicios", "👩‍💻 Coaches", "🤖 Programa IA"])
+    tab1, tab2, tab3, tab4, tab5 = st.tabs(["📋 Mi Programa", "💪 Ejercicios", "👩‍💻 Coaches", "🤖 Programa IA", "🎬 Workouts"])
 
     # ══════════════════════════════════════════════════════════════════════════
     # TAB 1 — MI PROGRAMA
@@ -787,4 +787,67 @@ GEMINI_API_KEY = "tu-api-key-aqui"
                     except Exception as e:
                         st.error(f"❌ Error inesperado: {e}")
                         st.exception(e)
+    # ══════════════════════════════════════════════════════════════════════════
+    # TAB 5 — WORKOUTS COMPLETOS
+    # Opción A: video embebido curado | Opción B: fallback a búsqueda YouTube
+    # ══════════════════════════════════════════════════════════════════════════
+    with tab5:
+        st.subheader("🎬 Workouts Completos")
+        st.caption("Videos curados de los mejores coaches. Reproducidos directo en la app.")
+
+        # Filtro por categoría
+        categorias = list(WORKOUTS_DB.keys())
+        cat_sel = st.selectbox("Categoría", ["Todas"] + categorias, key="cat_workout")
+
+        # Filtro por nivel
+        nivel_sel = st.selectbox("Nivel", ["Todos", "Principiante", "Intermedio", "Avanzado"],
+                                  key="niv_workout")
+        st.divider()
+
+        # Mostrar videos
+        cats_mostrar = categorias if cat_sel == "Todas" else [cat_sel]
+
+        for cat in cats_mostrar:
+            videos = WORKOUTS_DB.get(cat, [])
+            if nivel_sel != "Todos":
+                videos = [v for v in videos if v["nivel"] == nivel_sel]
+            if not videos:
+                continue
+
+            st.markdown(f"### {cat}")
+
+            for vid in videos:
+                with st.container():
+                    col_info, col_badges = st.columns([3, 1])
+                    with col_info:
+                        st.markdown(f"**{vid['titulo']}**")
+                        st.caption(f"👩‍💻 {vid['coach']}  ·  ⏱ {vid['duracion']}  ·  🏋️ {vid['equipo']}")
+                        st.caption(vid['descripcion'])
+                    with col_badges:
+                        niv_color = {"Principiante": "#0f3d1a",
+                                     "Intermedio":   "#3d3800",
+                                     "Avanzado":     "#3d0f0f"}.get(vid["nivel"], "#141708")
+                        st.markdown(
+                            f'<div style="background:{niv_color};border-radius:6px;'
+                            f'padding:6px 10px;text-align:center;font-size:12px;'
+                            f'font-weight:600;margin-top:4px;">{vid["nivel"]}</div>',
+                            unsafe_allow_html=True)
+
+                    # Opción A: video embebido
+                    video_url = f"https://www.youtube.com/watch?v={vid['video_id']}"
+                    try:
+                        st.video(video_url)
+                    except Exception:
+                        # Opción B: fallback a búsqueda YouTube
+                        busqueda_url = f"https://www.youtube.com/results?search_query={vid['busqueda'].replace(' ', '+')}"
+                        st.info("⚠️ Video no disponible.")
+                        st.link_button("🔍 Buscar en YouTube", busqueda_url,
+                                        use_container_width=True)
+                    st.markdown("---")
+
+        # Botón para agregar video desde Sheets (admin)
+        st.divider()
+        st.caption("💡 ¿Quieres agregar tus propios videos? Agrega filas en la pestaña "
+                   "`videos_workouts` de tu Google Sheet con: categoria, titulo, coach, "
+                   "duracion, nivel, equipo, descripcion, video_id")
 
