@@ -2,7 +2,8 @@ import streamlit as st
 import importlib
 import utils.estado as estado
 
-st.set_page_config(page_title="Mis Rutinas", page_icon="🏋️", layout="wide", initial_sidebar_state="expanded")
+st.set_page_config(page_title="Mis Rutinas", page_icon="🏋️",
+                   layout="wide", initial_sidebar_state="expanded")
 
 st.markdown("""
 <style>
@@ -19,7 +20,19 @@ div[data-testid="stMetric"] {
 </style>
 """, unsafe_allow_html=True)
 
-# Cargar perfil del usuario UNA vez al inicio de la sesión
+# ── Verificar autenticación (autenticado=True Y user_id no vacío) ─────────────
+autenticado = st.session_state.get("autenticado", False)
+user_id     = st.session_state.get("user_id", "")
+
+if not autenticado or not user_id:
+    # Limpiar sesión corrupta si hay autenticado=True pero sin user_id
+    if autenticado and not user_id:
+        st.session_state.clear()
+    from modules.login import mostrar_login
+    mostrar_login()
+    st.stop()
+
+# ── Cargar perfil ─────────────────────────────────────────────────────────────
 estado.cargar_perfil()
 
 PAGES = [
@@ -34,14 +47,18 @@ PAGES = [
     ("🔧 Diagnóstico",      "modules.diagnostico"),
 ]
 
+nombre = st.session_state.get("nombre_usuario", "Mis Rutinas")
+
 with st.sidebar:
-    nombre = estado.get("nombre_usuario", "Mis Rutinas")
     st.markdown(f"### 🏋️ {nombre}")
-    st.caption("Fitness & Bienestar Personal")
+    st.caption(f"ID: `{user_id}`")
     st.divider()
     selection = st.radio("nav", [p[0] for p in PAGES], label_visibility="collapsed")
     st.divider()
-    st.caption("v1.3")
+    if st.button("🚪 Cerrar sesión", use_container_width=True):
+        st.session_state.clear()
+        st.rerun()
+    st.caption("v1.5")
 
 module_name = next(m for name, m in PAGES if name == selection)
 try:
