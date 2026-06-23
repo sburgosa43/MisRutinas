@@ -6,7 +6,7 @@ from pathlib import Path
 from datetime import date, timedelta
 
 import utils.estado as estado
-from utils.sheets import get_worksheet, leer_df_usuario, guardar_fila_usuario, eliminar_fila_sheets
+from utils.sheets import get_worksheet, leer_df_usuario, guardar_fila_usuario, eliminar_fila_sheets, actualizar_fila_sheets
 from utils.ui_helpers import seccion_eliminar
 from utils.calculos import (calcular_imc, clasificar_imc,
                              calcular_rcc, clasificar_rcc_mujer,
