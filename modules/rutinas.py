@@ -454,21 +454,51 @@ def mostrar():
     # TAB 1 — MI PROGRAMA
     # ══════════════════════════════════════════════════════════════════════════
     with tab1:
-        # Perfil resumen
-        c1, c2, c3, c4 = st.columns(4)
-        c1.metric("Objetivo", obj.split("(")[0].strip()[:25])
-        c2.metric("Nivel", nivel.split("—")[0].strip()[:15] if "—" in nivel else nivel[:15])
-        c3.metric("Días/semana", f"{dias} días")
-        c4.metric("Equipo", equipo.split("—")[0].strip()[:20])
+        # Perfil resumen — cards grandes legibles
+        obj_label  = obj.split("(")[0].strip()[:30]
+        niv_label  = nivel.split("—")[0].strip()[:20] if "—" in nivel else nivel[:20]
+        eq_label   = equipo.split("—")[0].strip()[:25]
+        st.markdown(f"""
+        <div style="display:flex;gap:12px;margin-bottom:8px;flex-wrap:wrap;">
+            <div style="flex:1;min-width:160px;background:#141708;border:1px solid rgba(196,228,56,0.3);
+                        border-radius:8px;padding:14px 16px;">
+                <div style="font-size:11px;color:#7a8a50;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">Objetivo</div>
+                <div style="font-size:15px;font-weight:700;color:#c4e438;">{obj_label}</div>
+            </div>
+            <div style="flex:1;min-width:140px;background:#141708;border:1px solid rgba(196,228,56,0.3);
+                        border-radius:8px;padding:14px 16px;">
+                <div style="font-size:11px;color:#7a8a50;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">Nivel</div>
+                <div style="font-size:15px;font-weight:700;color:#c4e438;">{niv_label}</div>
+            </div>
+            <div style="flex:1;min-width:120px;background:#141708;border:1px solid rgba(196,228,56,0.3);
+                        border-radius:8px;padding:14px 16px;">
+                <div style="font-size:11px;color:#7a8a50;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">Frecuencia</div>
+                <div style="font-size:15px;font-weight:700;color:#c4e438;">{dias} días/sem</div>
+            </div>
+            <div style="flex:1;min-width:160px;background:#141708;border:1px solid rgba(196,228,56,0.3);
+                        border-radius:8px;padding:14px 16px;">
+                <div style="font-size:11px;color:#7a8a50;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">Equipo</div>
+                <div style="font-size:15px;font-weight:700;color:#c4e438;">{eq_label}</div>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
 
         # Nota de fase del ciclo
         if fase:
-            color_fase = {"Menstrual":"#fee2e2","Folicular":"#dcfce7",
-                          "Ovulatoria":"#fef9c3","Lútea":"#f3e8ff"}.get(fase["nombre"],"#f1f5f9")
+            fase_estilos = {
+                "Menstrual":  {"bg":"#3d0f0f","border":"#8b2020","text":"#ff9090","badge":"#8b2020"},
+                "Folicular":  {"bg":"#0f3d1a","border":"#208b40","text":"#90ff90","badge":"#208b40"},
+                "Ovulatoria": {"bg":"#3d3800","border":"#8b8000","text":"#ffe060","badge":"#8b8000"},
+                "Lútea":      {"bg":"#2d1a4d","border":"#6020a0","text":"#c090ff","badge":"#6020a0"},
+            }
+            es = fase_estilos.get(fase["nombre"], {"bg":"#1a1a12","border":"#c4e438","text":"#c4e438","badge":"#444"})
             st.markdown(f"""
-            <div style="background:{color_fase};border-radius:10px;padding:12px 16px;margin:12px 0;">
-                <strong>{fase['emoji']} Fase {fase['nombre']} — Día {fase['dia']}</strong><br>
-                <span style="font-size:14px;">{fase['nota']}</span>
+            <div style="background:{es['bg']};border:1px solid {es['border']};border-left:4px solid {es['border']};
+                        border-radius:8px;padding:14px 18px;margin:12px 0;">
+                <div style="font-size:16px;font-weight:700;color:{es['text']};margin-bottom:4px;">
+                    {fase['emoji']} Fase {fase['nombre']} — Día {fase['dia']}
+                </div>
+                <div style="font-size:13px;color:{es['text']};opacity:0.85;">{fase['nota']}</div>
             </div>""", unsafe_allow_html=True)
 
         st.divider()
