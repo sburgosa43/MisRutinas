@@ -232,11 +232,11 @@ with st.sidebar:
 import sys
 module_name = next(m for name, m in PAGES if name == selection)
 try:
-    # Forzar recarga para evitar que Python sirva módulos cacheados incorrectamente
-    if module_name in sys.modules:
-        module = importlib.reload(sys.modules[module_name])
-    else:
-        module = importlib.import_module(module_name)
+    # Limpiar caché de módulos para garantizar carga correcta
+    for key in list(sys.modules.keys()):
+        if key.startswith("modules."):
+            del sys.modules[key]
+    module = importlib.import_module(module_name)
     module.mostrar()
 except Exception as e:
     st.error(f"Error cargando módulo: {e}")
