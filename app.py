@@ -1,6 +1,5 @@
 import streamlit as st
 import importlib
-import utils.estado as estado
 
 st.set_page_config(page_title="Mis Rutinas", page_icon="🏋️",
                    layout="wide", initial_sidebar_state="expanded")
@@ -20,6 +19,13 @@ div[data-testid="stMetric"] {
 </style>
 """, unsafe_allow_html=True)
 
+# ── Importar estado con diagnóstico ───────────────────────────────────────────
+try:
+    import utils.estado as estado
+except Exception as e:
+    st.error(f"❌ Error importando utils.estado: {type(e).__name__}: {e}")
+    st.stop()
+
 # ── Autenticación ─────────────────────────────────────────────────────────────
 autenticado = st.session_state.get("autenticado", False)
 user_id     = st.session_state.get("user_id", "")
@@ -27,8 +33,15 @@ user_id     = st.session_state.get("user_id", "")
 if not autenticado or not user_id:
     if autenticado and not user_id:
         st.session_state.clear()
-    from modules.login import mostrar_login
-    mostrar_login()
+    try:
+        from modules.login import mostrar_login
+        mostrar_login()
+    except ImportError as e:
+        st.error(f"❌ ImportError en modules.login: {type(e).__name__}: {e}")
+        st.exception(e)
+    except Exception as e:
+        st.error(f"❌ Error en login: {type(e).__name__}: {e}")
+        st.exception(e)
     st.stop()
 
 # ── Cargar perfil ─────────────────────────────────────────────────────────────
@@ -36,7 +49,6 @@ estado.cargar_perfil()
 genero = estado.get("genero", "Mujer")
 nombre = st.session_state.get("nombre_usuario", "Mis Rutinas")
 
-# ── Navegación (Ciclo Menstrual solo para Mujer) ──────────────────────────────
 PAGES = [
     ("📊 Mis Medidas",      "modules.medidas"),
     ("🏠 Dashboard",        "modules.dashboard"),
@@ -63,7 +75,7 @@ with st.sidebar:
     if st.button("🚪 Cerrar sesión", use_container_width=True):
         st.session_state.clear()
         st.rerun()
-    st.caption("v1.5")
+    st.caption("v1.7")
 
 module_name = next(m for name, m in PAGES if name == selection)
 try:
