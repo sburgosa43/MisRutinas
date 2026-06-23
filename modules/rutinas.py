@@ -540,7 +540,7 @@ def mostrar():
         st.warning("⚠️ Completa la **🧬 Evaluación Inicial** primero para obtener tu programa personalizado.")
         return
 
-    tab1, tab2, tab3, tab4, tab5 = st.tabs(["📋 Mi Programa", "💪 Ejercicios", "👩‍💻 Coaches", "🤖 Programa IA", "🎬 Workouts"])
+    tab1, tab2, tab3, tab4, tab5 = st.tabs(["📋 Mi Programa", "🎬 Workouts", "🤖 Programa IA", "💪 Ejercicios", "👩‍💻 Coaches"])
 
     # ══════════════════════════════════════════════════════════════════════════
     # TAB 1 — MI PROGRAMA
@@ -670,9 +670,9 @@ def mostrar():
 
 
     # ══════════════════════════════════════════════════════════════════════════
-    # TAB 2 — EJERCICIOS
+    # TAB 4 — EJERCICIOS
     # ══════════════════════════════════════════════════════════════════════════
-    with tab2:
+    with tab4:
         st.subheader("💪 Biblioteca de ejercicios")
         st.caption("Videos cortos (<4 min) priorizando coaches top: Bret Contreras · Jeff Nippard · Squat University · Heather Robertson")
 
@@ -720,9 +720,9 @@ def mostrar():
                         st.link_button("🔍 Buscar tutorial", ej["url"], use_container_width=True)
 
     # ══════════════════════════════════════════════════════════════════════════
-    # TAB 3 — COACHES
+    # TAB 5 — COACHES
     # ══════════════════════════════════════════════════════════════════════════
-    with tab3:
+    with tab5:
         st.subheader("👩‍💻 Coaches recomendados")
         obj_limpio = obj.lower()
         areas_recomendadas = coaches_por_objetivo(obj_limpio)
@@ -749,9 +749,9 @@ def mostrar():
                     st.markdown("---")
             st.divider()
     # ══════════════════════════════════════════════════════════════════════════
-    # TAB 4 — PROGRAMA IA (Google Gemini)
+    # TAB 3 — PROGRAMA IA (Google Gemini)
     # ══════════════════════════════════════════════════════════════════════════
-    with tab4:
+    with tab3:
         st.subheader("🤖 Programa Personalizado con IA")
         st.caption("Ingresa los resultados de tu evaluación corporal profesional y la IA generará un programa completamente personalizado.")
 
@@ -887,29 +887,68 @@ GEMINI_API_KEY = "tu-api-key-aqui"
                         st.error(f"❌ Error inesperado: {e}")
                         st.exception(e)
     # ══════════════════════════════════════════════════════════════════════════
-    # TAB 5 — WORKOUTS COMPLETOS
-    # Opción A: video embebido curado | Opción B: fallback a búsqueda YouTube
+    # TAB 2 — WORKOUTS COMPLETOS
+    # Base: videos curados en código | Enriquecida: videos agregados desde la app
     # ══════════════════════════════════════════════════════════════════════════
-    with tab5:
+    with tab2:
         st.subheader("🎬 Workouts Completos")
-        st.caption("Videos curados de los mejores coaches. Reproducidos directo en la app.")
+        st.caption("Biblioteca base curada + tus videos favoritos guardados desde la app.")
 
-        # Filtro por categoría
-        categorias = list(WORKOUTS_DB.keys())
-        cat_sel = st.selectbox("Categoría", ["Todas"] + categorias, key="cat_workout")
+        # ── Cargar videos desde Google Sheets (biblioteca personal) ───────────
+        videos_personales = {}
+        try:
+            from utils.sheets import leer_df_usuario
+            df_vids = leer_df_usuario("videos_workouts", uid)
+            if not df_vids.empty:
+                activos = df_vids[df_vids.get("activo", "si").astype(str).str.lower() == "si"]
+                for _, row in activos.iterrows():
+                    cat = str(row.get("categoria", "📌 Mis Videos"))
+                    if cat not in videos_personales:
+                        videos_personales[cat] = []
+                    videos_personales[cat].append({
+                        "titulo":     str(row.get("titulo",     "")),
+                        "coach":      str(row.get("coach",      "")),
+                        "duracion":   str(row.get("duracion",   "")),
+                        "nivel":      str(row.get("nivel",      "Intermedio")),
+                        "equipo":     str(row.get("equipo",     "")),
+                        "descripcion":str(row.get("descripcion","")),
+                        "video_id":   str(row.get("video_id",   "")),
+                        "busqueda":   str(row.get("titulo",     "")),
+                        "desde_sheets": True,
+                        "fila_sheets": int(row.get("_fila_sheets", 0)),
+                    })
+        except Exception:
+            pass
 
-        # Filtro por nivel
-        nivel_sel = st.selectbox("Nivel", ["Todos", "Principiante", "Intermedio", "Avanzado"],
-                                  key="niv_workout")
+        # Combinar: base + personales
+        todos_los_workouts = {**WORKOUTS_DB}
+        for cat, vids in videos_personales.items():
+            if cat in todos_los_workouts:
+                todos_los_workouts[cat] = todos_los_workouts[cat] + vids
+            else:
+                todos_los_workouts[cat] = vids
+
+        # ── Filtros ───────────────────────────────────────────────────────────
+        col_f1, col_f2 = st.columns(2)
+        with col_f1:
+            cat_sel = st.selectbox("Categoría", ["Todas"] + list(todos_los_workouts.keys()),
+                                    key="cat_w")
+        with col_f2:
+            niv_sel = st.selectbox("Nivel", ["Todos","Principiante","Intermedio","Avanzado"],
+                                    key="niv_w")
+
+        total_videos = sum(len(v) for v in todos_los_workouts.values())
+        personales_count = sum(len(v) for v in videos_personales.values())
+        st.caption(f"📚 {total_videos} videos en biblioteca · {personales_count} agregados por ti")
         st.divider()
 
-        # Mostrar videos
-        cats_mostrar = categorias if cat_sel == "Todas" else [cat_sel]
+        # ── Mostrar videos ────────────────────────────────────────────────────
+        cats_mostrar = list(todos_los_workouts.keys()) if cat_sel == "Todas" else [cat_sel]
 
         for cat in cats_mostrar:
-            videos = WORKOUTS_DB.get(cat, [])
-            if nivel_sel != "Todos":
-                videos = [v for v in videos if v["nivel"] == nivel_sel]
+            videos = todos_los_workouts.get(cat, [])
+            if niv_sel != "Todos":
+                videos = [v for v in videos if v.get("nivel") == niv_sel]
             if not videos:
                 continue
 
@@ -917,36 +956,107 @@ GEMINI_API_KEY = "tu-api-key-aqui"
 
             for vid in videos:
                 with st.container():
-                    col_info, col_badges = st.columns([3, 1])
+                    col_info, col_badge = st.columns([4, 1])
                     with col_info:
-                        st.markdown(f"**{vid['titulo']}**")
+                        tag_personal = " 🌟 *Mi biblioteca*" if vid.get("desde_sheets") else ""
+                        st.markdown(f"**{vid['titulo']}**{tag_personal}")
                         st.caption(f"👩‍💻 {vid['coach']}  ·  ⏱ {vid['duracion']}  ·  🏋️ {vid['equipo']}")
-                        st.caption(vid['descripcion'])
-                    with col_badges:
-                        niv_color = {"Principiante": "#0f3d1a",
-                                     "Intermedio":   "#3d3800",
-                                     "Avanzado":     "#3d0f0f"}.get(vid["nivel"], "#141708")
+                        if vid.get("descripcion"):
+                            st.caption(vid["descripcion"])
+                    with col_badge:
+                        niv_color = {"Principiante":"#0f3d1a","Intermedio":"#3d3800",
+                                     "Avanzado":"#3d0f0f"}.get(vid.get("nivel",""),"#141708")
                         st.markdown(
                             f'<div style="background:{niv_color};border-radius:6px;'
                             f'padding:6px 10px;text-align:center;font-size:12px;'
-                            f'font-weight:600;margin-top:4px;">{vid["nivel"]}</div>',
+                            f'font-weight:600;">{vid.get("nivel","")}</div>',
                             unsafe_allow_html=True)
+                        # Botón eliminar solo para videos personales
+                        if vid.get("desde_sheets") and vid.get("fila_sheets"):
+                            if st.button("🗑️", key=f"del_vid_{vid['fila_sheets']}",
+                                          help="Eliminar de mi biblioteca"):
+                                try:
+                                    from utils.sheets import eliminar_fila_sheets
+                                    eliminar_fila_sheets("videos_workouts", vid["fila_sheets"])
+                                    st.success("Eliminado.")
+                                    st.rerun()
+                                except Exception as ex:
+                                    st.error(f"Error: {ex}")
 
-                    # Opción A: video embebido
-                    video_url = f"https://www.youtube.com/watch?v={vid['video_id']}"
-                    try:
-                        st.video(video_url)
-                    except Exception:
-                        # Opción B: fallback a búsqueda YouTube
-                        busqueda_url = f"https://www.youtube.com/results?search_query={vid['busqueda'].replace(' ', '+')}"
-                        st.info("⚠️ Video no disponible.")
-                        st.link_button("🔍 Buscar en YouTube", busqueda_url,
-                                        use_container_width=True)
+                    # Embed video
+                    if vid.get("video_id"):
+                        video_url = f"https://www.youtube.com/watch?v={vid['video_id']}"
+                        try:
+                            st.video(video_url)
+                        except Exception:
+                            busqueda = vid.get("busqueda","").replace(" ","+")
+                            st.link_button("🔍 Buscar en YouTube",
+                                f"https://www.youtube.com/results?search_query={busqueda}",
+                                use_container_width=True)
                     st.markdown("---")
 
-        # Botón para agregar video desde Sheets (admin)
+        # ── Agregar video nuevo ───────────────────────────────────────────────
         st.divider()
-        st.caption("💡 ¿Quieres agregar tus propios videos? Agrega filas en la pestaña "
-                   "`videos_workouts` de tu Google Sheet con: categoria, titulo, coach, "
-                   "duracion, nivel, equipo, descripcion, video_id")
+        with st.expander("➕ Agregar video a mi biblioteca", expanded=False):
+            st.caption("Pega la URL de YouTube o el ID del video. Se guarda en tu cuenta.")
+
+            url_input = st.text_input("URL o ID del video de YouTube",
+                placeholder="https://www.youtube.com/watch?v=... o el ID directo (ej: Emu7uB59E2g)")
+
+            # Preview del video
+            video_id_preview = None
+            if url_input.strip():
+                import re
+                url = url_input.strip()
+                for pattern in [r'v=([a-zA-Z0-9_-]{11})', r'youtu\.be/([a-zA-Z0-9_-]{11})',
+                                 r'embed/([a-zA-Z0-9_-]{11})', r'^([a-zA-Z0-9_-]{11})$']:
+                    m = re.search(pattern, url)
+                    if m:
+                        video_id_preview = m.group(1)
+                        break
+
+                if video_id_preview:
+                    st.success(f"✅ Video ID detectado: `{video_id_preview}`")
+                    st.video(f"https://www.youtube.com/watch?v={video_id_preview}")
+                else:
+                    st.warning("No se pudo extraer el ID. Verifica la URL.")
+
+            col_a1, col_a2 = st.columns(2)
+            with col_a1:
+                v_titulo   = st.text_input("Título del video", key="v_tit")
+                v_coach    = st.text_input("Coach / Canal", key="v_coach",
+                                            placeholder="Ej: Heather Robertson")
+                v_duracion = st.text_input("Duración", key="v_dur",
+                                            placeholder="Ej: 20 min")
+            with col_a2:
+                cats_existentes = list(todos_los_workouts.keys()) + ["📌 Mis Videos", "🔧 Otra categoría"]
+                v_cat = st.selectbox("Categoría", cats_existentes, key="v_cat")
+                if v_cat == "🔧 Otra categoría":
+                    v_cat = st.text_input("Nueva categoría", key="v_cat_nueva")
+                v_nivel   = st.selectbox("Nivel", ["Principiante","Intermedio","Avanzado"], key="v_niv")
+                v_equipo  = st.text_input("Equipo necesario", key="v_eq",
+                                           placeholder="Ej: Sin equipo / Mancuernas")
+
+            v_desc = st.text_area("Descripción breve", key="v_desc",
+                                   placeholder="¿Qué trabaja este video?", height=70)
+
+            if st.button("💾 Guardar en mi biblioteca", type="primary",
+                          use_container_width=True):
+                if not video_id_preview:
+                    st.error("❌ Ingresa una URL válida de YouTube.")
+                elif not v_titulo.strip():
+                    st.error("❌ Ingresa un título para el video.")
+                else:
+                    try:
+                        from utils.sheets import guardar_fila_usuario
+                        guardar_fila_usuario("videos_workouts", [
+                            v_cat, v_titulo.strip(), v_coach.strip(),
+                            v_duracion.strip(), v_nivel, v_equipo.strip(),
+                            v_desc.strip(), video_id_preview, "si",
+                            str(date.today())
+                        ], uid)
+                        st.success(f"✅ '{v_titulo}' guardado en tu biblioteca.")
+                        st.rerun()
+                    except Exception as ex:
+                        st.error(f"Error al guardar: {ex}")
 
