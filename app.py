@@ -117,22 +117,42 @@ button[kind="secondary"] {
 
 /* ── TABS ─────────────────────────────────────────────────── */
 .stTabs [data-baseweb="tab-list"] {
-    background-color: #141708 !important;
-    border-radius: 6px !important;
-    padding: 4px !important;
-    gap: 4px !important;
+    background-color: transparent !important;
+    border-bottom: 2px solid rgba(196,228,56,0.2) !important;
+    padding: 0 0 0 0 !important;
+    gap: 6px !important;
 }
 .stTabs [data-baseweb="tab"] {
     color: #7a8a50 !important;
     font-weight: 600 !important;
     text-transform: uppercase !important;
-    letter-spacing: 1px !important;
-    font-size: 12px !important;
+    letter-spacing: 0.8px !important;
+    font-size: 11px !important;
+    padding: 10px 18px !important;
+    border: 1px solid rgba(196,228,56,0.15) !important;
+    border-bottom: none !important;
+    border-radius: 6px 6px 0 0 !important;
+    background-color: #0f1208 !important;
+    margin-bottom: -2px !important;
+    white-space: nowrap !important;
+}
+.stTabs [data-baseweb="tab"]:hover {
+    color: #c4e438 !important;
+    border-color: rgba(196,228,56,0.4) !important;
+    background-color: #141708 !important;
 }
 .stTabs [aria-selected="true"] {
-    background-color: #c4e438 !important;
-    color: #0e1009 !important;
-    border-radius: 4px !important;
+    background-color: #141708 !important;
+    color: #c4e438 !important;
+    border-color: #c4e438 !important;
+    border-bottom-color: #141708 !important;
+}
+.stTabs [data-baseweb="tab-panel"] {
+    background-color: #141708 !important;
+    border: 1px solid rgba(196,228,56,0.15) !important;
+    border-top: none !important;
+    border-radius: 0 0 8px 8px !important;
+    padding: 20px 16px !important;
 }
 
 /* ── DATAFRAME ────────────────────────────────────────────── */
