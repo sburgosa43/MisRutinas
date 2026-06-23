@@ -20,12 +20,11 @@ div[data-testid="stMetric"] {
 </style>
 """, unsafe_allow_html=True)
 
-# ── Verificar autenticación (autenticado=True Y user_id no vacío) ─────────────
+# ── Autenticación ─────────────────────────────────────────────────────────────
 autenticado = st.session_state.get("autenticado", False)
 user_id     = st.session_state.get("user_id", "")
 
 if not autenticado or not user_id:
-    # Limpiar sesión corrupta si hay autenticado=True pero sin user_id
     if autenticado and not user_id:
         st.session_state.clear()
     from modules.login import mostrar_login
@@ -34,24 +33,30 @@ if not autenticado or not user_id:
 
 # ── Cargar perfil ─────────────────────────────────────────────────────────────
 estado.cargar_perfil()
+genero = estado.get("genero", "Mujer")
+nombre = st.session_state.get("nombre_usuario", "Mis Rutinas")
 
+# ── Navegación (Ciclo Menstrual solo para Mujer) ──────────────────────────────
 PAGES = [
+    ("📊 Mis Medidas",      "modules.medidas"),
     ("🏠 Dashboard",        "modules.dashboard"),
     ("🧬 Evaluación",       "modules.evaluacion"),
-    ("📊 Mis Medidas",      "modules.medidas"),
-    ("📈 Progreso",         "modules.progreso"),
-    ("🌙 Ciclo Menstrual",  "modules.ciclo"),
     ("⚡ Calculadoras",     "modules.calculadoras"),
     ("🏋️ Rutinas",         "modules.rutinas"),
+    ("📈 Progreso",         "modules.progreso"),
+]
+
+if genero == "Mujer":
+    PAGES.append(("🌙 Ciclo Menstrual", "modules.ciclo"))
+
+PAGES += [
     ("⚙️ Configuración",   "modules.configuracion"),
     ("🔧 Diagnóstico",      "modules.diagnostico"),
 ]
 
-nombre = st.session_state.get("nombre_usuario", "Mis Rutinas")
-
 with st.sidebar:
     st.markdown(f"### 🏋️ {nombre}")
-    st.caption(f"ID: `{user_id}`")
+    st.caption("Fitness & Bienestar Personal")
     st.divider()
     selection = st.radio("nav", [p[0] for p in PAGES], label_visibility="collapsed")
     st.divider()
