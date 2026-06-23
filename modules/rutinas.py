@@ -514,6 +514,23 @@ WORKOUTS_DB = {
 }
 
 
+def recomendar_workout_dia(grupos: list) -> dict | None:
+    """Selecciona el workout completo más relevante para los grupos del día."""
+    g = " ".join(grupos).lower()
+    if any(x in g for x in ["glúteos","isquiotibiales","cuádriceps","piernas"]):
+        cat = "🦵 Piernas & Glúteos"
+    elif "cardio" in g:
+        cat = "🔥 HIIT"
+    elif any(x in g for x in ["core","abdomen"]):
+        cat = "🏋️ Core & Abdomen"
+    elif any(x in g for x in ["pecho","hombros","espalda","bíceps","tríceps"]):
+        cat = "💪 Full Body"
+    else:
+        cat = "💪 Full Body"
+    vids = WORKOUTS_DB.get(cat, [])
+    return vids[0] if vids else None
+
+
 # ══════════════════════════════════════════════════════════════════════════════
 # MÓDULO PRINCIPAL
 # ══════════════════════════════════════════════════════════════════════════════
@@ -605,15 +622,42 @@ def mostrar():
 
         for i, dia_info in enumerate(estructura):
             with st.expander(f"{dia_info['nombre']}", expanded=(i == 0)):
-                st.markdown(f"**Grupos musculares:** {', '.join(dia_info['grupos'])}")
+
+                # ── Nota de fase del ciclo ────────────────────────────────
                 if fase:
                     intensidad = fase["intensidad"]
+                    nota_fase = ""
                     if intensidad < 0.8:
-                        st.caption("💜 Reduce el peso un 20-30% hoy según tu fase del ciclo.")
+                        nota_fase = "💜 Reduce el peso un 20-30% hoy según tu fase del ciclo."
                     elif intensidad > 1.0:
-                        st.caption("⚡ ¡Hoy puedes dar el máximo! Excelente día para nuevos récords.")
+                        nota_fase = "⚡ ¡Hoy puedes dar el máximo! Excelente día para nuevos récords."
+                    if nota_fase:
+                        st.caption(nota_fase)
 
-                st.divider()
+                # ── Workout sugerido para el día ──────────────────────────
+                workout_dia = recomendar_workout_dia(dia_info["grupos"])
+                if workout_dia:
+                    st.markdown("#### 🎬 Workout guiado sugerido para hoy")
+                    col_wd1, col_wd2 = st.columns([3, 1])
+                    with col_wd1:
+                        st.caption(
+                            f"👩‍💻 **{workout_dia['coach']}** · ⏱ {workout_dia['duracion']} · "
+                            f"🏋️ {workout_dia['equipo']}")
+                        st.caption(
+                            f"_{workout_dia['descripcion']}_")
+                        st.caption(
+                            "💡 Síguelo completo **o** úsalo de calentamiento antes del plan de abajo.")
+                    with col_wd2:
+                        st.markdown(
+                            f'<div style="background:#0f3d1a;border-radius:6px;padding:8px;'
+                            f'text-align:center;font-size:11px;font-weight:600;color:#90ff90;">'
+                            f'WORKOUT<br>GUIADO</div>', unsafe_allow_html=True)
+                    st.video(f"https://www.youtube.com/watch?v={workout_dia['video_id']}")
+                    st.divider()
+
+                # ── Plan de ejercicios del día ────────────────────────────
+                st.markdown(f"#### 💪 Plan de ejercicios · {', '.join(dia_info['grupos'])}")
+                st.caption(f"📊 {rep_scheme} · ⏱ {descanso} descanso entre series")
 
                 ejercicios_dia = []
                 for grupo in dia_info["grupos"]:
@@ -626,24 +670,35 @@ def mostrar():
                     continue
 
                 for ej in ejercicios_dia:
-                    col_info, col_link = st.columns([5, 1])
-                    with col_info:
-                        dif_color = {"principiante":"#dcfce7",
-                                     "intermedio":"#fef9c3",
-                                     "avanzado":"#fee2e2"}.get(ej["dificultad"],"#f1f5f9")
+                    dif_color = {"principiante":"#0f3d1a","intermedio":"#3d3800",
+                                 "avanzado":"#3d0f0f"}.get(ej["dificultad"],"#141708")
+                    dif_text  = {"principiante":"#90ff90","intermedio":"#ffe060",
+                                 "avanzado":"#ff9090"}.get(ej["dificultad"],"#c4e438")
+
+                    col_ej, col_vt = st.columns([5, 1])
+                    with col_ej:
                         st.markdown(
                             f"**{ej['nombre']}** &nbsp;"
-                            f"{badge(ej['grupo'], '#e0e7ff')} &nbsp;"
-                            f"{badge(ej['dificultad'], dif_color)}",
+                            f"{badge(ej['grupo'], '#1a2040')} &nbsp;"
+                            f'<span style="background:{dif_color};color:{dif_text};'
+                            f'font-size:10px;padding:2px 7px;border-radius:8px;'
+                            f'font-weight:600;">{ej["dificultad"]}</span>',
                             unsafe_allow_html=True)
-                        st.caption(f"📊 {rep_scheme} · ⏱ {descanso} descanso")
-                        st.caption(ej["descripcion"][:120] + "..." if len(ej["descripcion"]) > 120 else ej["descripcion"])
-                    with col_link:
+                        st.caption(ej["descripcion"][:130] + "…" if len(ej["descripcion"]) > 130 else ej["descripcion"])
+                    with col_vt:
                         vid_id = _EJ_VIDEOS.get(ej.get("id",""))
                         if vid_id:
-                            st.link_button("▶ Tutorial", f"https://www.youtube.com/watch?v={vid_id}", use_container_width=True)
+                            st.link_button("▶ Tutorial",
+                                f"https://www.youtube.com/watch?v={vid_id}",
+                                use_container_width=True)
                         elif ej.get("url"):
-                            st.link_button("🔍 Buscar", ej["url"], use_container_width=True)
+                            st.link_button("🔍 Ver", ej["url"], use_container_width=True)
+
+                    # Tutorial embebido expandible
+                    vid_id = _EJ_VIDEOS.get(ej.get("id",""))
+                    if vid_id:
+                        with st.expander(f"🎬 Tutorial: {ej['nombre']}", expanded=False):
+                            st.video(f"https://www.youtube.com/watch?v={vid_id}")
                     st.markdown("---")
 
         # Registro de sesión
