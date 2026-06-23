@@ -7,11 +7,11 @@ st.set_page_config(page_title="Mis Rutinas", page_icon="🏋️",
 
 st.markdown("""
 <style>
-[data-testid="stSidebar"] { background-color: #d7e7fd; }
+[data-testid="stSidebar"] { background-color: #0f172a; }
 [data-testid="stSidebar"] label,
 [data-testid="stSidebar"] .stRadio p,
 [data-testid="stSidebar"] span,
-[data-testid="stSidebar"] small { color: #898c8f !important; }
+[data-testid="stSidebar"] small { color: #e2e8f0 !important; }
 [data-testid="stSidebar"] hr { border-color: #334155; }
 div[data-testid="stMetric"] {
     background-color: #f8fafc; border: 1px solid #e2e8f0;
